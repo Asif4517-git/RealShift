@@ -20,6 +20,7 @@ import v6Idle from "../assets/engine/v6_idle.mp3?inline";
 import v6Rev from "../assets/engine/v6_rev.mp3?inline";
 import flatMid from "../assets/engine/f6_mid.mp3?inline";
 import flatHigh from "../assets/engine/f6_hi.mp3?inline";
+import { recordedFamily } from "./audioFamilies";
 import type { SimEvent, SimSnapshot } from "./physics";
 import type { Vehicle } from "./vehicles";
 
@@ -547,23 +548,21 @@ export class EngineAudio {
     const context = this.ctx;
     // Sample anchor RPMs were measured by the loop editor; see the manifest.
     // Non-matching vehicles are explicitly approximate, not OEM recordings.
-    const clips: [string, number][] = voice.diesel
+    const family = recordedFamily(vehicle.engine.layout, voice.cylinders, voice.diesel);
+    const clips: [string, number][] = family === "diesel-i4"
       ? [[dieselIdle, 887], [dieselRev, 2191]]
-      : voice.cylinders === 3
-        ? [[i3Idle, 880]]
-        : vehicle.engine.layout.includes("Flat")
-        ? [[v6Idle, 651], [flatMid, 3706], [flatHigh, 5193]]
-        : voice.cylinders === 8
-          ? [[v8Idle, 805], [v8Rev, 1444], [v8Mid, 2265], [v8High, 6478]]
-          : vehicle.engine.layout.includes("Inline") && voice.cylinders === 6
-            ? [[i6Idle, 757], [i6TurboRev, 3530]]
-            : voice.cylinders === 6
-            ? [[v6Idle, 651], [v6Rev, 4111]]
-            : [[i4Idle, 877], [i4Rev, 2274], [vehicle.engine.code === "F20C" ? s2000High : i4RevB, vehicle.engine.code === "F20C" ? 7317 : 2529]];
+      : family === "petrol-i3" ? [[i3Idle, 880]]
+      : family === "petrol-flat6" ? [[v6Idle, 651], [flatMid, 3706], [flatHigh, 5193]]
+      : family === "petrol-v8" ? [[v8Idle, 805], [v8Rev, 1444], [v8Mid, 2265], [v8High, 6478]]
+      : family === "petrol-i6" ? [[i6Idle, 757], [i6TurboRev, 3530]]
+      : family === "petrol-v6" ? [[v6Idle, 651], [v6Rev, 4111]]
+      : family === "petrol-i4" ? [[i4Idle, 877], [i4Rev, 2274], [vehicle.engine.code === "F20C" ? s2000High : i4RevB, vehicle.engine.code === "F20C" ? 7317 : 2529]]
+      : [];
     let buffers: AudioBuffer[];
     let fallback = false;
     let starterBuffer: AudioBuffer | null = null;
     try {
+      if (!family) throw new Error("No recording for this engine family");
       buffers = await Promise.all(clips.map(async ([url]) => {
         const cached = this.decoded.get(url);
         if (cached) return cached;
@@ -575,7 +574,7 @@ export class EngineAudio {
       }));
       // A separately recorded V8 starter is optional; it is never treated as an
       // engine-speed loop. Other families continue to use the procedural starter.
-      if (!voice.diesel && voice.cylinders === 8 && vehicle.engine.layout.includes("V")) {
+      if (family === "petrol-v8") {
         try {
           starterBuffer = this.decoded.get(v8Crank) ?? null;
           if (!starterBuffer) {

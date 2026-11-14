@@ -5,6 +5,7 @@
 // see src/assets/engine/MANIFEST.md. No manufacturer CAD or game-ripped assets.
 
 export type SoundCharacter =
+  | "custom-synth"
   | "turbo-petrol-i3"
   | "na-petrol-i4"
   | "turbo-petrol-i4"
@@ -1174,6 +1175,7 @@ export const tyreRadiusM = (vehicle: Vehicle) => {
 };
 
 export const ENGINE_TYPE_SHORT: Record<SoundCharacter, string> = {
+  "custom-synth": "SYNTH · CUSTOM",
   "turbo-petrol-i3": "TURBO · I3",
   "na-petrol-i4": "NA · I4",
   "turbo-petrol-i4": "TURBO · I4",

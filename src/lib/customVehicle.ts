@@ -1,3 +1,4 @@
+import { recordedFamily } from './audioFamilies';
 import { VEHICLES, type Vehicle, type SoundCharacter } from './vehicles';
 
 /** User-entered targets define an estimated curve, not a manufacturer dyno result. */
@@ -47,7 +48,8 @@ export function customVehicle(build: CustomBuild): Vehicle {
   const peakRpm = Math.round(s.redline * 0.9);
   const powerTorque = s.powerHp * 745.7 / (peakRpm * Math.PI / 30);
   const torquePeakRpm = Math.round(s.idleRpm + (peakRpm - s.idleRpm) * (s.turbo ? 0.4 : 0.65));
-  let character: SoundCharacter = s.fuel === 'Diesel' ? 'turbo-diesel-i4' : s.cylinders === 3 ? 'turbo-petrol-i3' : s.layout === 'Flat' && s.cylinders === 6 ? 'turbo-flat6' : s.layout === 'V' && s.cylinders >= 8 ? 'na-petrol-v8' : s.layout === 'V' && s.cylinders === 6 ? 'na-petrol-v6' : s.layout === 'Inline' && s.cylinders === 6 ? (s.turbo ? 'turbo-petrol-i6' : 'na-petrol-i6') : s.turbo ? 'turbo-petrol-i4' : 'na-petrol-i4';
+  const family = recordedFamily(`${s.layout}-${s.cylinders}`, s.cylinders, s.fuel === 'Diesel');
+  const character: SoundCharacter = !family ? 'custom-synth' : s.fuel === 'Diesel' ? 'turbo-diesel-i4' : s.cylinders === 3 ? 'turbo-petrol-i3' : s.layout === 'Flat' && s.cylinders === 6 ? 'turbo-flat6' : s.layout === 'V' && s.cylinders >= 8 ? 'na-petrol-v8' : s.layout === 'V' && s.cylinders === 6 ? 'na-petrol-v6' : s.layout === 'Inline' && s.cylinders === 6 ? (s.turbo ? 'turbo-petrol-i6' : 'na-petrol-i6') : s.turbo ? 'turbo-petrol-i4' : 'na-petrol-i4';
   return {
     ...base, id: build.id, make: 'Custom', model: s.name.trim(), variant: 'User build', year: new Date().getFullYear(), generation: 'Estimated configuration',
     tags: ['Custom', s.turbo ? 'Turbocharged' : 'Naturally aspirated'],
@@ -60,7 +62,7 @@ export function customVehicle(build: CustomBuild): Vehicle {
     gearbox: { ...base.gearbox, type: `${s.ratios.length}-speed custom manual`, speeds: s.ratios.length, ratios: [...s.ratios], reverse: s.reverse, finalDrive: s.finalDrive, drivetrain: s.drivetrain, clutchCapacityNm: s.clutchCapacityNm, efficiency: s.drivetrain === '4WD' ? 0.85 : 0.9 },
     chassis: { ...base.chassis, weightKg: s.weightKg, tyre: s.tyre.toUpperCase(), wheelDiameterIn: Number(s.tyre.match(/R(\d{2})$/i)?.[1] || 18) },
     dyno: { peakPowerHp:s.powerHp, measuredWheelHp:s.powerHp*(s.drivetrain === '4WD' ? 0.85 : 0.9), driveLoss:s.drivetrain === '4WD' ? 0.15 : 0.1, note: `Estimated; ${s.targetTopSpeed} km/h target is not a speed cap.` },
-    sound: { ...base.sound, character, label: 'Approximate engine-family audio', description: 'Uses the nearest available recorded family, not a recording of this build.', turbo:s.turbo, diesel:s.fuel === 'Diesel', firingNote:`${s.cylinders} cylinders`, layers:['Approximate recorded engine'] },
+    sound: { ...base.sound, character, label: family ? 'Approximate engine-family audio' : 'Synthetic engine fallback', description: family ? 'Uses a generic recorded engine family, not a recording of this build.' : 'No matched engine-family recording is available; this build uses synthesized engine audio.', turbo:s.turbo, diesel:s.fuel === 'Diesel', firingNote:`${s.cylinders} cylinders`, layers:[family ? 'Approximate recorded engine' : 'Synthetic engine fallback'] },
     verified: [], estimated: ['All custom specifications, curve shape, losses and acoustic profile'], sources: [], notes: 'User-defined simulation, not a verified real vehicle. Top-speed target does not override physics.',
   };
 }

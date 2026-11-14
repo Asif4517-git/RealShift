@@ -1,7 +1,13 @@
 import { strict as assert } from 'node:assert';
 import { DEFAULT_CUSTOM, customVehicle, validateCustom, estimateTopSpeed, suggestRatios } from '../src/lib/customVehicle';
+import { recordedFamily } from '../src/lib/audioFamilies';
 import { DynoSimulation } from '../src/lib/physics';
 assert.deepEqual(validateCustom(DEFAULT_CUSTOM), []);
+assert.equal(recordedFamily('90° V8',8,false),'petrol-v8');
+assert.equal(recordedFamily('V-12',12,false),null);
+assert.equal(recordedFamily('Flat-4',4,false),null);
+assert.equal(recordedFamily('V-8',8,true),null);
+assert.equal(customVehicle({id:'custom-v12',spec:{...DEFAULT_CUSTOM,layout:'V',cylinders:12}}).sound.character,'custom-synth');
 assert(estimateTopSpeed(DEFAULT_CUSTOM) > 50);
 assert.equal(suggestRatios(DEFAULT_CUSTOM, 6).length, 6);
 assert.deepEqual(suggestRatios(DEFAULT_CUSTOM, 0), []);

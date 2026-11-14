@@ -10,6 +10,6 @@ try {
   await page.waitForFunction(() => window.__REALSHIFT_AUDIO__?.levels()?.modelReady, null, {timeout:90000});
   const model=await page.evaluate(()=>window.__REALSHIFT_AUDIO__.levels().model);
   assert.equal(model,'synthetic-fallback');
-  await page.getByText('Synthetic fallback · recording decode failed').waitFor({timeout:30000});
+  await page.getByText('Synthetic fallback · recording unavailable').waitFor({timeout:30000});
   assert.deepEqual(errors,[]); console.log('Recorded audio decode failure falls back and is labelled correctly.');
 } finally { await browser.close(); }
