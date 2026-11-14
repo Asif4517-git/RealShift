@@ -1,5 +1,5 @@
 # REALSHIFT — Automotive Transmission & Dyno Simulator
-        - play live:(https://asif4517-git.github.io/RealShift/)
+        - play live: https://asif4517-git.github.io/RealShift/
 A browser-based chassis dynamometer simulator focused on engine behaviour, manual
 transmissions, clutch mechanics, working instrumentation and per-vehicle engine audio.
 
