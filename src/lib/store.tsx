@@ -4,6 +4,7 @@ import type { ClutchMode, DynoRun } from "../lib/physics";
 import type { CameraPreset } from "../three/CarScene";
 import type { ClusterTheme } from "../components/clusters";
 import { DEFAULT_VEHICLE_ID, getVehicle, VEHICLES } from "../lib/vehicles";
+import { customVehicle, validateCustom, type CustomBuild } from "./customVehicle";
 
 export type Units = "metric" | "imperial";
 export type GraphicsQuality = "performance" | "balanced" | "high";
@@ -81,6 +82,9 @@ interface StoreValue {
   vehicleId: string;
   vehicle: ReturnType<typeof getVehicle>;
   runs: DynoRun[];
+  customBuilds: CustomBuild[];
+  saveCustom: (build: CustomBuild) => void;
+  deleteCustom: (id: string) => void;
   updateSettings: (patch: Partial<Settings>) => void;
   updateAudio: (patch: Partial<AudioVolumes>) => void;
   setBinding: (action: BindingAction, code: string) => void;
@@ -98,6 +102,7 @@ const SETTINGS_KEY = "realshift.settings.v2";
 const BINDINGS_KEY = "realshift.bindings.v1";
 const VEHICLE_KEY = "realshift.vehicle.v1";
 const RUNS_KEY = "realshift.runs.v1";
+const CUSTOM_KEY = "realshift.custom.v1";
 
 function load<T>(key: string, fallback: T): T {
   try {
@@ -122,12 +127,17 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [bindings, setBindings] = useState<Record<BindingAction, string>>(() =>
     load<Record<BindingAction, string>>(BINDINGS_KEY, DEFAULT_BINDINGS),
   );
+  const [customBuilds, setCustomBuilds] = useState<CustomBuild[]>(() => {
+    const builds = load<CustomBuild[]>(CUSTOM_KEY, []);
+    return Array.isArray(builds) ? builds.filter(b => { try { return typeof b.id === "string" && b.id.startsWith("custom-") && validateCustom(b.spec).length === 0; } catch { return false; } }) : [];
+  });
   const [vehicleId, setVehicleId] = useState<string>(() => {
     const stored = load<string>(VEHICLE_KEY, DEFAULT_VEHICLE_ID);
-    return VEHICLES.some((v) => v.id === stored) ? stored : DEFAULT_VEHICLE_ID;
+    return VEHICLES.some((v) => v.id === stored) || (Array.isArray(load<CustomBuild[]>(CUSTOM_KEY, [])) && load<CustomBuild[]>(CUSTOM_KEY, []).some(b => b.id === stored && (() => { try { return validateCustom(b.spec).length === 0; } catch { return false; } })())) ? stored : DEFAULT_VEHICLE_ID;
   });
   const [runs, setRuns] = useState<DynoRun[]>(() => load<DynoRun[]>(RUNS_KEY, []));
 
+  useEffect(() => { try { localStorage.setItem(CUSTOM_KEY, JSON.stringify(customBuilds)); } catch { /* storage unavailable */ } }, [customBuilds]);
   useEffect(() => {
     localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
   }, [settings]);
@@ -165,7 +175,16 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setBindings({ ...DEFAULT_BINDINGS });
   }, []);
   const selectVehicle = useCallback((id: string) => {
-    if (VEHICLES.some((v) => v.id === id)) setVehicleId(id);
+    if (VEHICLES.some((v) => v.id === id) || customBuilds.some(b => b.id === id)) setVehicleId(id);
+  }, [customBuilds]);
+  const saveCustom = useCallback((build: CustomBuild) => {
+    if (validateCustom(build.spec).length) return;
+    setCustomBuilds(prev => [...prev.filter(b => b.id !== build.id), build]);
+    setVehicleId(build.id);
+  }, []);
+  const deleteCustom = useCallback((id: string) => {
+    setCustomBuilds(prev => prev.filter(b => b.id !== id));
+    setVehicleId(prev => prev === id ? DEFAULT_VEHICLE_ID : prev);
   }, []);
   const addRun = useCallback((run: DynoRun) => {
     setRuns((prev) => [run, ...prev].slice(0, 14));
@@ -175,12 +194,16 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }, []);
   const clearRuns = useCallback(() => setRuns([]), []);
 
+  const selectedBuild = customBuilds.find(b => b.id === vehicleId);
+  const selectedVehicle = useMemo(() => selectedBuild ? customVehicle(selectedBuild) : getVehicle(vehicleId), [selectedBuild, vehicleId]);
+
   const value = useMemo<StoreValue>(
     () => ({
       settings,
       bindings,
       vehicleId,
-      vehicle: getVehicle(vehicleId),
+      vehicle: selectedVehicle,
+      customBuilds, saveCustom, deleteCustom,
       runs,
       updateSettings,
       updateAudio,
@@ -193,7 +216,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       deleteRun,
       clearRuns,
     }),
-    [settings, bindings, vehicleId, runs, updateSettings, updateAudio, setBinding, resetBinding, resetBindings, resetAllSettings, selectVehicle, addRun, deleteRun, clearRuns],
+    [settings, bindings, vehicleId, selectedVehicle, runs, customBuilds, saveCustom, deleteCustom, updateSettings, updateAudio, setBinding, resetBinding, resetBindings, resetAllSettings, selectVehicle, addRun, deleteRun, clearRuns],
   );
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;

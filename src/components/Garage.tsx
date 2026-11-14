@@ -15,6 +15,8 @@ import {
   Weight,
   Zap,
 } from "lucide-react";
+import { CustomEditor } from "./CustomEditor";
+import { customVehicle } from "../lib/customVehicle";
 import { DynoSimulation } from "../lib/physics";
 import { nf, torqueUnit, torqueValue } from "../lib/format";
 import { useStore } from "../lib/store";
@@ -43,7 +45,7 @@ export function Garage({
   onNavigate: (view: AppView) => void;
   onOpenDatasheet: (vehicle: Vehicle) => void;
 }) {
-  const { vehicle, selectVehicle, settings } = useStore();
+  const { vehicle, selectVehicle, settings, customBuilds } = useStore();
   const [filter, setFilter] = useState<Filter>("all");
   const [query, setQuery] = useState("");
   const [paintIndex, setPaintIndex] = useState(0);
@@ -57,7 +59,7 @@ export function Garage({
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return VEHICLES.filter((candidate) => {
+    return [...VEHICLES, ...customBuilds.map(customVehicle)].filter((candidate) => {
       const matchesFilter =
         filter === "all" ||
         (filter === "petrol" && candidate.engine.fuel === "Petrol") ||
@@ -68,7 +70,7 @@ export function Garage({
       const haystack = `${candidate.make} ${candidate.model} ${candidate.variant} ${candidate.engine.code} ${candidate.engine.layout} ${candidate.tags.join(" ")}`.toLowerCase();
       return matchesFilter && (!q || haystack.includes(q));
     });
-  }, [filter, query]);
+  }, [filter, query, customBuilds]);
 
   const selectAndEnter = () => {
     onNavigate("dyno");
@@ -268,6 +270,8 @@ export function Garage({
           );
         })}
       </div>
+
+      <CustomEditor />
 
       {filtered.length === 0 && (
         <Panel className="flex flex-col items-center justify-center gap-2 px-5 py-14 text-center">

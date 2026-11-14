@@ -1,0 +1,41 @@
+import { useState } from 'react';
+import { DEFAULT_CUSTOM, validateCustom, type CustomBuild, type CustomSpec } from '../lib/customVehicle';
+import { useStore } from '../lib/store';
+import { Button, Panel } from './ui';
+
+const copyDefault = () => ({ ...DEFAULT_CUSTOM, ratios: [...DEFAULT_CUSTOM.ratios] });
+export function CustomEditor() {
+  const { customBuilds, saveCustom, deleteCustom, selectVehicle, settings, updateSettings } = useStore();
+  const [id, setId] = useState<string | null>(null);
+  const [spec, setSpec] = useState<CustomSpec>(copyDefault);
+  const [ratioText, setRatioText] = useState(DEFAULT_CUSTOM.ratios.join(', '));
+  const [message, setMessage] = useState('');
+  const patch = (p: Partial<CustomSpec>) => setSpec(v => ({ ...v, ...p }));
+  const edit = (b: CustomBuild) => { setId(b.id); setSpec({ ...b.spec, ratios: [...b.spec.ratios] }); setRatioText(b.spec.ratios.join(', ')); setMessage(''); };
+  const reset = () => { setId(null); setSpec(copyDefault()); setRatioText(DEFAULT_CUSTOM.ratios.join(', ')); setMessage(''); };
+  const numeric = (label: string, key: keyof CustomSpec, step = 1) => <label className="text-xs text-mut">{label}<input className="mt-1 w-full rounded border border-line bg-[#0c110d] p-2 text-fg" type="number" step={step} value={spec[key] as number} onChange={e => patch({ [key]: e.target.valueAsNumber })} /></label>;
+  const choose = (label: string, key: 'fuel' | 'layout' | 'drivetrain', choices: string[]) => <label className="text-xs text-mut">{label}<select className="mt-1 w-full rounded border border-line bg-[#0c110d] p-2 text-fg" value={spec[key]} onChange={e => patch({ [key]: e.target.value })}>{choices.map(c => <option key={c}>{c}</option>)}</select></label>;
+  const save = () => {
+    const ratios = ratioText.split(',').map(x => x.trim() === '' ? NaN : Number(x));
+    const next = { ...spec, ratios }; const errors = validateCustom(next);
+    if (errors.length) { setMessage(errors.join(' ')); return; }
+    const buildId = id ?? `custom-${crypto.randomUUID()}`;
+    saveCustom({ id: buildId, spec: next }); setId(buildId); setSpec(next); setMessage('Build saved and selected.');
+  };
+  return <Panel className="space-y-4 p-4 sm:p-5">
+    <div><h2 className="font-display text-xl text-fg">Custom vehicle editor</h2><p className="mt-1 text-xs text-mut">User-defined estimates, not certified specifications. Audio uses the closest available engine family. Top-speed target is a design goal, not a speed cap.</p></div>
+    {customBuilds.length > 0 && <div className="space-y-2">{customBuilds.map(b => <div key={b.id} className="flex flex-wrap items-center gap-2"><span className="mr-auto text-sm text-fg">{b.spec.name}</span><Button size="sm" variant="outline" onClick={() => selectVehicle(b.id)}>Select</Button><Button size="sm" variant="outline" onClick={() => edit(b)}>Edit / rename</Button><Button size="sm" variant="outline" onClick={() => { edit(b); setId(null); setSpec({ ...b.spec, name: `${b.spec.name} copy`, ratios: [...b.spec.ratios] }); }}>Duplicate</Button><Button size="sm" variant="outline" onClick={() => { if (window.confirm(`Delete ${b.spec.name}? Saved dyno runs are retained.`)) { deleteCustom(b.id); if (id === b.id) reset(); } }}>Delete</Button></div>)}</div>}
+    <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+      <label className="text-xs text-mut">Build name<input className="mt-1 w-full rounded border border-line bg-[#0c110d] p-2 text-fg" value={spec.name} maxLength={60} onChange={e => patch({ name:e.target.value })} /></label>
+      {choose('Fuel', 'fuel', ['Petrol','Diesel'])}{choose('Layout', 'layout', ['Inline','V','Flat'])}{numeric('Cylinders', 'cylinders')}{numeric('Displacement (cc)', 'displacementCc')}
+      <label className="text-xs text-mut">Induction<select className="mt-1 w-full rounded border border-line bg-[#0c110d] p-2 text-fg" value={spec.turbo ? 'Turbo' : 'NA'} onChange={e => patch({turbo:e.target.value === 'Turbo'})}><option>NA</option><option>Turbo</option></select></label>
+      {numeric('Power target (hp)', 'powerHp')}{numeric('Peak torque (Nm)', 'torqueNm')}{numeric('Idle (rpm)', 'idleRpm')}{numeric('Redline (rpm)', 'redline')}{numeric('Limiter (rpm)', 'limiter')}{numeric('Flywheel inertia (kg·m²)', 'flywheelInertia', 0.01)}
+      <label className="col-span-2 text-xs text-mut">Forward gear ratios (1–8, comma-separated)<input className="mt-1 w-full rounded border border-line bg-[#0c110d] p-2 text-fg" value={ratioText} onChange={e => setRatioText(e.target.value)} /></label>
+      {numeric('Reverse ratio', 'reverse', 0.01)}{numeric('Final drive', 'finalDrive', 0.01)}{numeric('Clutch capacity (Nm)', 'clutchCapacityNm')}{choose('Drivetrain', 'drivetrain', ['FWD','RWD','4WD'])}{numeric('Mass (kg)', 'weightKg')}
+      <label className="text-xs text-mut">Tyre (determines radius)<input className="mt-1 w-full rounded border border-line bg-[#0c110d] p-2 text-fg" value={spec.tyre} onChange={e => patch({tyre:e.target.value})} /></label>{numeric('Top-speed target (km/h)', 'targetTopSpeed')}
+      <label className="text-xs text-mut">Clutch mode (app setting)<select className="mt-1 w-full rounded border border-line bg-[#0c110d] p-2 text-fg" value={settings.clutchMode} onChange={e => updateSettings({clutchMode:e.target.value as typeof settings.clutchMode})}><option value="manual">Manual</option><option value="assisted">Assisted</option><option value="auto">Automatic</option></select></label>
+    </div>
+    {message && <p role="status" className="text-xs text-accent">{message}</p>}
+    <div className="flex gap-2"><Button variant="primary" size="sm" onClick={save}>Save {id ? 'changes' : 'build'}</Button><Button variant="outline" size="sm" onClick={() => { if (window.confirm('Restore editor defaults? Saved builds are not affected.')) reset(); }}>Restore editor defaults</Button></div>
+  </Panel>;
+}

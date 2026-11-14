@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test:physics": "esbuild tests/physics.test.ts --bundle --platform=node --format=esm --outfile=/tmp/realshift-physics-test.mjs && node /tmp/realshift-physics-test.mjs"
+    "test:physics": "esbuild tests/physics.test.ts --bundle --platform=node --format=esm --outfile=/tmp/realshift-physics-test.mjs && node /tmp/realshift-physics-test.mjs",
+    "test:custom": "esbuild tests/custom.test.ts --bundle --platform=node --format=esm --outfile=/tmp/realshift-custom-test.mjs && node /tmp/realshift-custom-test.mjs"
   },
   "dependencies": {
     "clsx": "2.1.1",

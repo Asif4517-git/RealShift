@@ -118,8 +118,7 @@ export function useDyno(inputEnabled: boolean) {
     audio.setVehicle(vehicle);
     sim.setVehicle(vehicle);
     setSnapshot(sim.snapshot());
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [vehicle.id]);
+  }, [vehicle, audio, sim]);
   useEffect(() => {
     audio.setVolumes(settings.audio);
   }, [audio, settings.audio]);

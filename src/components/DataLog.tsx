@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { nf, speedUnit, speedValue, tempUnit, tempValue, torqueUnit, torqueValue, timeAgo } from "../lib/format";
 import { useStore } from "../lib/store";
+import { customVehicle } from "../lib/customVehicle";
 import { getVehicle, VEHICLES, type Vehicle } from "../lib/vehicles";
 import type { AppView } from "../lib/views";
 import { cn } from "../utils/cn";
@@ -42,14 +43,15 @@ export function DataLog({
   onOpenAudio: () => void;
   onOpenDatasheet: (vehicle: Vehicle) => void;
 }) {
-  const { runs, settings, deleteRun, clearRuns, updateAudio } = useStore();
+  const { runs, settings, deleteRun, clearRuns, updateAudio, customBuilds } = useStore();
   const [tab, setTab] = useState<Tab>("history");
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
   const [confirmClear, setConfirmClear] = useState(false);
   const units = settings.units;
 
   const selectedRun = useMemo(() => runs.find((r) => r.id === selectedRunId) ?? runs[0] ?? null, [runs, selectedRunId]);
-  const chartVehicle = selectedRun ? getVehicle(selectedRun.vehicleId) : getVehicle("mustang-gt-2017");
+  const resolveVehicle = (id: string) => { const custom = customBuilds.find(b => b.id === id); return custom ? customVehicle(custom) : getVehicle(id); };
+  const chartVehicle = selectedRun ? resolveVehicle(selectedRun.vehicleId) : getVehicle("mustang-gt-2017");
   const bestRun = useMemo(() => runs.reduce((best, run) => (run.peakHp > (best?.peakHp ?? 0) ? run : best), null as (typeof runs)[number] | null), [runs]);
 
   const exportRuns = () => {
@@ -182,7 +184,7 @@ export function DataLog({
                     </thead>
                     <tbody>
                       {runs.map((run) => {
-                        const v = getVehicle(run.vehicleId);
+                        const v = resolveVehicle(run.vehicleId);
                         const active = selectedRun?.id === run.id;
                         return (
                           <tr
