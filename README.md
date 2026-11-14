@@ -213,5 +213,5 @@ Custom builds are user estimates. The displayed road-speed estimate assumes
 steady full load, flat road, no dyno resistance and the simulation's simplified
 aerodynamics; it is neither a guarantee nor a speed cap. Audio uses the nearest
 available recording family and many load/transition states remain unrecorded.
-Only two garage photographs are currently provided; they show representative
+Nine garage photographs are currently provided; they show representative
 trims and their licences and attribution are in `src/assets/cars/MANIFEST.md`.
