@@ -15,6 +15,8 @@ import {
   Weight,
   Zap,
 } from "lucide-react";
+import supraPhoto from "../assets/cars/gr-supra.jpg?inline";
+import m3Photo from "../assets/cars/m3-g80.jpg?inline";
 import { CustomEditor } from "./CustomEditor";
 import { customVehicle } from "../lib/customVehicle";
 import { DynoSimulation } from "../lib/physics";
@@ -26,6 +28,11 @@ import { cn } from "../utils/cn";
 import CarScene from "../three/CarScene";
 import { CarBlueprint, TorqueCurveBars } from "./gauges";
 import { Button, Chip, EqBars, Panel, SectionHeading, StatusDot } from "./ui";
+
+const PHOTOS: Record<string, { src: string; description: string }> = {
+  'toyota-gr-supra-a90-2023-manual': { src: supraPhoto, description: 'GR Supra, representative trim' },
+  'bmw-m3-g80-2021-manual': { src: m3Photo, description: 'G80 M3 Competition, representative trim' },
+};
 
 type Filter = "all" | "petrol" | "diesel" | "turbo" | "na" | "4wd";
 
@@ -249,7 +256,8 @@ export function Garage({
                 </div>
               </div>
               <div className="relative mx-3 mt-1 overflow-hidden rounded-xl border border-white/[0.045] bg-[radial-gradient(ellipse_at_50%_20%,rgba(203,244,102,0.045),transparent_65%)] px-2 py-2">
-                <CarBlueprint vehicle={candidate} className="h-[78px] opacity-90 transition-opacity group-hover:opacity-100" />
+                {PHOTOS[candidate.id] ? <img src={PHOTOS[candidate.id].src} alt={PHOTOS[candidate.id].description} className="h-[78px] w-full rounded-lg object-cover" /> : <CarBlueprint vehicle={candidate} className="h-[78px] opacity-90 transition-opacity group-hover:opacity-100" />}
+                {PHOTOS[candidate.id] && <span className="absolute bottom-1 left-2 rounded bg-black/70 px-1 font-mono text-[8px] text-white">Representative trim · see photo credits below</span>}
                 <span className="absolute right-2 top-2 rounded border border-white/[0.07] px-1 py-0.5 font-mono text-[8px] uppercase tracking-[0.1em] text-mut-2">{ENGINE_TYPE_SHORT[candidate.sound.character]}</span>
               </div>
               <div className="grid grid-cols-3 divide-x divide-line-soft border-t border-line-soft">
@@ -271,6 +279,7 @@ export function Garage({
         })}
       </div>
 
+      <p className="text-[11px] text-mut-2">Photo credits: <a className="underline" href="https://commons.wikimedia.org/wiki/File:2023_Toyota_Supra_(2).jpg" target="_blank" rel="noopener noreferrer">GR Supra — Calreyn88</a> and <a className="underline" href="https://commons.wikimedia.org/wiki/File:BMW_M3_Competition_(G80)_Auto_Zuerich_2021_IMG_0043.jpg" target="_blank" rel="noopener noreferrer">G80 M3 — Alexander Migl</a>, <a className="underline" href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noopener noreferrer">CC BY-SA 4.0</a>. Displayed with cropping; photos show representative trims. Other cards use original blueprints.</p>
       <CustomEditor />
 
       {filtered.length === 0 && (
