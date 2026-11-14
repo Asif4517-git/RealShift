@@ -234,6 +234,24 @@ export function DynoBay({ onNavigate, onOpenControls, onOpenSettings, onOpenAudi
 
           <Panel>
             <PanelHeader
+              eyebrow="Instrumentation"
+              title="Live instrument cluster"
+              right={<span className="flex items-center gap-1.5 font-mono text-[9px] uppercase tracking-[0.12em] text-accent"><StatusDot tone="accent" pulse /> Engine data</span>}
+            />
+            <div className="px-3 pb-4 pt-3 sm:px-4">
+              <div className="mb-2 flex items-center justify-between gap-2 px-1">
+                <span className="label-xs">Instrument design</span>
+                <span className="hidden font-mono text-[10.5px] text-mut-2 sm:block">{CLUSTER_THEMES.find((t) => t.id === settings.cluster)?.blurb}</span>
+              </div>
+              <ClusterPicker value={settings.cluster} onChange={(theme: ClusterTheme) => updateSettings({ cluster: theme })} />
+              <div className="mx-auto mt-3 w-full max-w-[720px]">
+                <ClusterDisplay state={snap} units={units} theme={settings.cluster} />
+              </div>
+            </div>
+          </Panel>
+
+          <Panel>
+            <PanelHeader
               eyebrow="Dynamometer · live trace"
               title="Power & torque"
               right={
@@ -354,20 +372,8 @@ export function DynoBay({ onNavigate, onOpenControls, onOpenSettings, onOpenAudi
 
         <div className="min-w-0 space-y-4">
           <Panel>
-            <PanelHeader
-              eyebrow="Instrumentation"
-              title="Live instrument cluster"
-              right={<span className="flex items-center gap-1.5 font-mono text-[9px] uppercase tracking-[0.12em] text-accent"><StatusDot tone="accent" pulse /> Engine data</span>}
-            />
+            <PanelHeader eyebrow="Vehicle status" title="Engine & roller data" />
             <div className="px-3 pb-4 pt-3">
-              <div className="mb-2 flex items-center justify-between gap-2 px-1">
-                <span className="label-xs">Instrument design</span>
-                <span className="hidden font-mono text-[10.5px] text-mut-2 sm:block">{CLUSTER_THEMES.find((t) => t.id === settings.cluster)?.blurb}</span>
-              </div>
-              <ClusterPicker value={settings.cluster} onChange={(theme: ClusterTheme) => updateSettings({ cluster: theme })} />
-              <div className="mt-3">
-                <ClusterDisplay state={snap} units={units} theme={settings.cluster} />
-              </div>
               <div className="mt-1 grid grid-cols-2 gap-2">
                 <div className="rounded-xl border border-line-soft bg-black/25 px-3 py-2">
                   <p className="label-xs">Roller speed</p>

@@ -22,6 +22,13 @@ npm run preview  # serve the production build
 Open the served URL, press **Start engine**, then select a gear and apply throttle.
 Audio is created on the first user gesture (browser autoplay policy).
 
+### GitHub Pages
+
+The `.github/workflows/pages.yml` workflow builds and publishes the site on
+changes to `main`. In repository **Settings → Pages**, choose **GitHub Actions**
+as the build and deployment source. Once the workflow succeeds the project
+site is available at `https://asif4517-git.github.io/RealShift/`.
+
 ## Feature set
 
 | Area | Implementation |
