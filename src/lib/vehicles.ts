@@ -5,9 +5,11 @@
 // see src/assets/engine/MANIFEST.md. No manufacturer CAD or game-ripped assets.
 
 export type SoundCharacter =
+  | "turbo-petrol-i3"
   | "na-petrol-i4"
   | "turbo-petrol-i4"
   | "na-petrol-i6"
+  | "turbo-petrol-i6"
   | "na-petrol-v6"
   | "na-petrol-v8"
   | "turbo-flat6"
@@ -1093,7 +1095,7 @@ export const VEHICLES: Vehicle[] = [
     gearbox: {type:"6-speed manual",speeds:6,ratios:[4.11,2.32,1.54,1.18,1,0.85],reverse:3.73,finalDrive:3.46,drivetrain:"RWD",efficiency:0.9,clutchCapacityNm:700},
     chassis:{weightKg:1742,lengthMm:4803,widthMm:1887,heightMm:1433,wheelbaseMm:2858,tyre:"285/35R19",wheelDiameterIn:19},
     dyno:{peakPowerHp:473,measuredWheelHp:426,driveLoss:0.1,note:"Wheel power is estimated, not a measured dyno result."},
-    sound:{character:"na-petrol-i6",label:"Turbo inline-six approximation",description:"BMW inline-six idle and a Supra dyno rev, not an S58 recording.",firingNote:"Six cylinders, three firing events per revolution",layers:["Inline-six idle", "Inline-six dyno rev", "Turbo approximation"],turbo:true,diesel:false,resonanceHz:88,rasp:0.45,revHappiness:0.9},
+    sound:{character:"turbo-petrol-i6",label:"Turbo inline-six approximation",description:"BMW inline-six idle and a Supra dyno rev, not an S58 recording.",firingNote:"Six cylinders, three firing events per revolution",layers:["Inline-six idle", "Inline-six dyno rev", "Turbo approximation"],turbo:true,diesel:false,resonanceHz:88,rasp:0.45,revHappiness:0.9},
     verified:["2993 cc S58", "473 hp @ 6250 rpm", "406 lb-ft", "6-speed manual and ratios", "3.46 final drive", "3840 lb curb weight"],
     estimated:["Idle and limiter", "Torque curve between anchors", "Inertia", "Friction", "Clutch capacity", "Boost", "Drivetrain efficiency and wheel power"],
     sources:[{label:"BMW press specifications reproduced by i4talk",url:"https://www.i4talk.com/threads/specs-the-new-2021-bmw-m3-sedan-and-m4-coupe.73/"},{label:"Car and Driver — 2021 M3 specifications",url:"https://www.caranddriver.com/bmw/m3/specs/2021/bmw_m3_bmw-m3_2021"}],
@@ -1107,11 +1109,38 @@ export const VEHICLES: Vehicle[] = [
     gearbox:{type:"6-speed manual",speeds:6,ratios:[4.11,2.32,1.54,1.18,1,0.85],reverse:3.73,finalDrive:3.46,drivetrain:"RWD",efficiency:0.9,clutchCapacityNm:650},
     chassis:{weightKg:1537,lengthMm:4382,widthMm:1854,heightMm:1293,wheelbaseMm:2469,tyre:"275/35R19",wheelDiameterIn:19},
     dyno:{peakPowerHp:382,measuredWheelHp:344,driveLoss:0.1,note:"Wheel power is estimated, not a measured dyno result."},
-    sound:{character:"na-petrol-i6",label:"Turbo inline-six approximation",description:"BMW inline-six idle and a modified earlier Supra dyno rev, not this GR Supra's B58.",firingNote:"Six cylinders, three firing events per revolution",layers:["Inline-six idle", "Inline-six dyno rev", "Turbo approximation"],turbo:true,diesel:false,resonanceHz:90,rasp:0.45,revHappiness:0.92},
+    sound:{character:"turbo-petrol-i6",label:"Turbo inline-six approximation",description:"BMW inline-six idle and a modified earlier Supra dyno rev, not this GR Supra's B58.",firingNote:"Six cylinders, three firing events per revolution",layers:["Inline-six idle", "Inline-six dyno rev", "Turbo approximation"],turbo:true,diesel:false,resonanceHz:90,rasp:0.45,revHappiness:0.92},
     verified:["3.0-litre turbo inline-six", "382 hp", "368 lb-ft", "6-speed manual", "3.46 final drive", "3389 lb curb weight", "275/35R19 rear tyres"],
     estimated:["Individual gear and reverse ratios", "Idle and limiter", "Torque curve between anchors", "Inertia", "Friction", "Clutch capacity", "Boost", "Drivetrain efficiency and wheel power"],
     sources:[{label:"Toyota — 2023 GR Supra brochure",url:"https://www.toyota.com/content/dam/toyota/brochures/pdf/2023/grsupra_ebrochure.pdf"},{label:"2023 A91-MT specifications",url:"https://www.motormatchup.com/catalog/Toyota/GR-Supra/2023/A91_MT-Edition-Manual-(SE)"},{label:"Autoweek — manual final drive",url:"https://www.autoweek.com/news/sports-cars/a41108920/2023-toyota-gr-supra-manual-drive-review/"}],
     notes:"US A91-MT manual; ratios are provisional estimates and the speed limiter is not modelled.",
+  },
+
+  {
+    id:"mazda-mx5-nd2-2020",make:"Mazda",model:"MX-5 Miata",variant:"Sport 6MT",year:2020,generation:"ND2 · US soft-top",bodyStyle:"Roadster",country:"Japan",tags:["Naturally aspirated", "Lightweight", "RWD"],
+    paint:[{name:"Soul Red Crystal",hex:"#a6242c"},{name:"Arctic White",hex:"#e8eae5"},{name:"Jet Black",hex:"#1d1e20"}],
+    engine:{code:"Skyactiv-G 2.0",displacementCc:1998,cylinders:4,layout:"Inline-4",induction:"Naturally aspirated direct injection",aspiration:"NA",powerHp:181,powerRpm:7000,torqueNm:205,torqueRpm:"4,000 rpm",idleRpm:750,redline:7500,limiter:7700,compression:"13.0:1",fuel:"Petrol",flywheelInertia:0.16,frictionTorque:23,crankingRpm:230,
+      torqueCurve:[{rpm:750,nm:90},{rpm:2000,nm:155},{rpm:3000,nm:190},{rpm:4000,nm:205},{rpm:5500,nm:197},{rpm:7000,nm:184},{rpm:7700,nm:155}]},
+    gearbox:{type:"6-speed manual",speeds:6,ratios:[5.087,2.991,2.035,1.594,1.286,1],reverse:4.696,finalDrive:2.866,drivetrain:"RWD",efficiency:0.9,clutchCapacityNm:290},
+    chassis:{weightKg:1065,lengthMm:3914,widthMm:1735,heightMm:1234,wheelbaseMm:2309,tyre:"195/50R16",wheelDiameterIn:16},
+    dyno:{peakPowerHp:181,measuredWheelHp:163,driveLoss:0.1,note:"Wheel power is an estimated drivetrain loss, not a physical dyno measurement."},
+    sound:{character:"na-petrol-i4",label:"NA inline-four approximation",description:"Generic four-cylinder recordings; not a Skyactiv-G recording.",firingNote:"Four cylinders, two firing events per revolution",layers:["Inline-four idle", "Exhaust rev"],turbo:false,diesel:false,resonanceHz:110,rasp:0.4,revHappiness:1.05},
+    verified:["1998 cc Skyactiv-G", "181 hp @ 7000 rpm", "151 lb-ft @ 4000 rpm", "7500 rpm redline", "Six-speed manual ratios", "2.866 final drive"],
+    estimated:["Idle and limiter rpm", "Torque curve between anchors", "Inertia", "Friction", "Clutch capacity", "Drivetrain efficiency and wheel power"],
+    sources:[{label:"Mazda MX-5 transmission specifications",url:"https://www.mazda-qatar.com/vehicles/mazda-mx-5/grades/default.php"},{label:"2020 MX-5 US specification",url:"https://mossmiata.com/miata-mx5-2020-nd"}],notes:"US Sport soft-top manual; engine curve and drivetrain losses are estimated.",
+  },
+  {
+    id:"hyundai-i20-nline-2023-mt",make:"Hyundai",model:"i20 N Line",variant:"1.0 Turbo 6MT",year:2023,generation:"BC3 facelift · India",bodyStyle:"Hatchback",country:"South Korea",tags:["Turbocharged", "Three-cylinder", "FWD"],
+    paint:[{name:"Polar White",hex:"#e5e9e7"},{name:"Thunder Blue",hex:"#526d7c"},{name:"Fiery Red",hex:"#a4262f"}],
+    engine:{code:"1.0 T-GDi",displacementCc:998,cylinders:3,layout:"Inline-3",induction:"Turbocharged direct injection",aspiration:"Turbo",powerHp:118,powerRpm:6000,torqueNm:172,torqueRpm:"1,500–4,000 rpm",idleRpm:800,redline:6500,limiter:6700,compression:"10.5:1",boostBar:1,fuel:"Petrol",flywheelInertia:0.12,frictionTorque:17,crankingRpm:240,
+      torqueCurve:[{rpm:800,nm:70},{rpm:1500,nm:172},{rpm:3000,nm:172},{rpm:4000,nm:172},{rpm:5000,nm:160},{rpm:6000,nm:140},{rpm:6700,nm:110}]},
+    gearbox:{type:"6-speed manual",speeds:6,ratios:[3.615,1.955,1.286,0.971,0.774,0.65],reverse:3.6,finalDrive:4.3,drivetrain:"FWD",efficiency:0.9,clutchCapacityNm:240},
+    chassis:{weightKg:1210,lengthMm:3995,widthMm:1775,heightMm:1505,wheelbaseMm:2580,tyre:"195/55R16",wheelDiameterIn:16},
+    dyno:{peakPowerHp:118,measuredWheelHp:106,driveLoss:0.1,note:"Wheel power is estimated, not a measured dyno result."},
+    sound:{character:"turbo-petrol-i3",label:"Three-cylinder idle approximation",description:"VW three-cylinder idle pitched across the rev range; no i20 recording or high-rpm sample is available.",firingNote:"Three cylinders, 1.5 firing events per revolution",layers:["Three-cylinder idle loop", "Turbo approximation"],turbo:true,diesel:false,resonanceHz:100,rasp:0.4,revHappiness:0.88},
+    verified:["998 cc turbo petrol inline-three", "118 bhp @ 6000 rpm", "172 Nm @ 1500–4000 rpm", "Six-speed manual", "195/55R16 tyres"],
+    estimated:["Gear and final-drive ratios", "Kerb weight for this trim", "Idle and limiter", "Torque curve", "Inertia", "Friction", "Clutch capacity", "Boost", "Losses and wheel power"],
+    sources:[{label:"Autocar India — 2023 facelift and manual gearbox",url:"https://www.autocarindia.com/car-news/hyundai-i20-n-line-facelift-launched-at-rs-999-lakh-429372"},{label:"i20 N Line engine and dimensions",url:"https://www.carandbike.com/hyundai-cars/i20-n-line/specifications"}],notes:"Indian 2023 facelift, conventional manual rather than the earlier iMT. Gear ratios are provisional estimates.",
   },
 ];
 
@@ -1130,9 +1159,11 @@ export const tyreRadiusM = (vehicle: Vehicle) => {
 };
 
 export const ENGINE_TYPE_SHORT: Record<SoundCharacter, string> = {
+  "turbo-petrol-i3": "TURBO · I3",
   "na-petrol-i4": "NA · I4",
   "turbo-petrol-i4": "TURBO · I4",
   "na-petrol-i6": "NA · I6",
+  "turbo-petrol-i6": "TURBO · I6",
   "na-petrol-v6": "NA · V6",
   "na-petrol-v8": "NA · V8",
   "turbo-flat6": "TT · FLAT-6",

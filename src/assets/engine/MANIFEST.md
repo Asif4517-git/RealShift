@@ -52,3 +52,9 @@ The following edited loops were obtained from [350Chev at 022cc9d](https://githu
 | v8xbb_rev.mp3 | [Ford 460 V8](https://freesound.org/people/Henaway/sounds/127980/), Henaway | CC0 1.0 | 2265 rpm, V8 |
 
 Inline-six custom builds use the BMW/Supra bank as an approximation; the Supra recording is not necessarily representative of other inline-six engines. The V8 rev loop fills an intermediate band; it does not make the Mustang recording vehicle-specific. There are still no independently recorded load, release or shutdown bands for these vehicles.
+
+| Asset | Original recording / author | Licence | Approximate anchor |
+|---|---|---|---|
+| i3_idle.mp3 | [Volkswagen three-cylinder start and idle](https://freesound.org/people/rodrigocswm/sounds/584878/), rodrigocswm | CC0 1.0 | 880 rpm, inline-three |
+
+The i20 and three-cylinder custom builds use this idle loop as a rough approximation, not an i20 recording. There is no three-cylinder high-rpm recording in the bank: playback rate is bounded, so high-rpm pitch is not accurate. This needs a suitable licensed recorded rev band and listening validation.

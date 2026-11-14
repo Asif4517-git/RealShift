@@ -2,6 +2,7 @@
 // simulated RPM. A procedural fallback is used only when decoding fails.
 // Sources, approximations, and missing load bands: src/assets/engine/MANIFEST.md.
 
+import i3Idle from "../assets/engine/i3_idle.mp3?inline";
 import i4Idle from "../assets/engine/i4s_idle.mp3?inline";
 import i4Rev from "../assets/engine/i4_rev.mp3?inline";
 import i4RevB from "../assets/engine/i4b_rev.mp3?inline";
@@ -540,7 +541,9 @@ export class EngineAudio {
     // Non-matching vehicles are explicitly approximate, not OEM recordings.
     const clips: [string, number][] = voice.diesel
       ? [[dieselIdle, 887], [dieselRev, 2191]]
-      : vehicle.engine.layout.includes("Flat")
+      : voice.cylinders === 3
+        ? [[i3Idle, 880]]
+        : vehicle.engine.layout.includes("Flat")
         ? [[v6Idle, 651], [flatMid, 3706], [flatHigh, 5193]]
         : voice.cylinders === 8
           ? [[v8Idle, 805], [v8Rev, 1444], [v8Mid, 2265], [v8High, 6478]]

@@ -198,7 +198,7 @@ export function Garage({
             >
               {option.label}
               <span className="ml-1.5 text-[8.5px] opacity-60">
-                {option.id === "all" ? VEHICLES.length : VEHICLES.filter((v) =>
+                {option.id === "all" ? VEHICLES.length + customBuilds.length : [...VEHICLES, ...customBuilds.map(customVehicle)].filter((v) =>
                   option.id === "petrol" ? v.engine.fuel === "Petrol" :
                   option.id === "diesel" ? v.engine.fuel === "Diesel" :
                   option.id === "turbo" ? v.engine.aspiration.includes("Turbo") :

@@ -13,6 +13,7 @@ import {
   VolumeX,
   X,
 } from "lucide-react";
+import { VEHICLES } from "../lib/vehicles";
 import { useStore } from "../lib/store";
 import type { AppView } from "../lib/views";
 import { VIEW_LABELS } from "../lib/views";
@@ -24,7 +25,7 @@ import { IconButton, Kbd, StatusDot } from "./ui";
 
 const NAV: { view: AppView; label: string; icon: typeof Gauge; hint: string }[] = [
   { view: "dyno", label: "Dyno Bay", icon: Gauge, hint: "Live test cell" },
-  { view: "garage", label: "Garage", icon: CarFront, hint: "11 vehicles" },
+  { view: "garage", label: "Garage", icon: CarFront, hint: `${VEHICLES.length} vehicles` },
   { view: "data", label: "Data Log", icon: ChartLine, hint: "Runs & sources" },
   { view: "about", label: "About", icon: Info, hint: "Creator & project" },
 ];
@@ -60,7 +61,7 @@ export function Sidebar({
   mobile?: boolean;
   onClose?: () => void;
 }) {
-  const { vehicle } = useStore();
+  const { vehicle, customBuilds } = useStore();
   return (
     <aside
       className={cn(
@@ -128,7 +129,7 @@ export function Sidebar({
                   {active && <span className="absolute inset-y-1.5 left-0 w-[2px] rounded-full bg-accent" />}
                   <Icon size={15} strokeWidth={active ? 2 : 1.7} className={active ? "text-accent" : "text-mut-2 group-hover:text-mut"} />
                   <span className="flex-1 text-[14px] font-medium">{item.label}</span>
-                  <span className={cn("font-mono text-[9.5px] tracking-wide", active ? "text-accent/70" : "text-mut-2")}>{item.hint.split(" ")[0]}</span>
+                  <span className={cn("font-mono text-[9.5px] tracking-wide", active ? "text-accent/70" : "text-mut-2")}>{item.view === "garage" ? VEHICLES.length + customBuilds.length : item.hint.split(" ")[0]}</span>
                 </button>
               </li>
             );
