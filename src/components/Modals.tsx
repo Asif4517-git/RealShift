@@ -122,7 +122,7 @@ export function SettingsModal({
             <p className="label-xs text-accent">Recommended audio mix</p>
             <p className="mt-1">For {vehicle.engine.layout} {vehicle.engine.fuel.toLowerCase()}: engine 88%, exhaust {vehicle.engine.cylinders >= 6 ? 80 : 70}%, intake 46%, turbo {vehicle.engine.boostBar ? 45 : 0}%. A starting point, not a measured calibration.</p>
             <p>Current: engine {Math.round(audio.engine * 100)}%, exhaust {Math.round(audio.exhaust * 100)}%, intake {Math.round(audio.intake * 100)}%, turbo {Math.round(audio.turbo * 100)}%.</p>
-            <Button variant="outline" size="sm" className="mt-2" onClick={() => { updateAudio({ engine: 0.88, exhaust: vehicle.engine.cylinders >= 6 ? 0.8 : 0.7, intake: 0.46, turbo: vehicle.engine.boostBar ? 0.45 : 0 }); markSaved(); }}>Apply recommendation</Button>
+            <div className="flex flex-wrap gap-1 mt-2">{([['engine', 0.88], ['exhaust', vehicle.engine.cylinders >= 6 ? 0.8 : 0.7], ['intake', 0.46], ['turbo', vehicle.engine.boostBar ? 0.45 : 0]] as const).map(([key, value]) => <Button key={key} variant="outline" size="sm" onClick={() => { updateAudio({ [key]: value }); markSaved(); }}>Apply {key}</Button>)}</div>
           </div>
           <div className="rounded-xl border border-accent/20 bg-accent/[0.045] p-3">
             <div className="flex items-center justify-between gap-2">
@@ -182,7 +182,7 @@ export function SettingsModal({
             <p className="label-xs text-accent">Recommended settings</p>
             <p className="mt-1">Suggested roller load {Math.round(Math.min(45, Math.max(18, 18 + vehicle.engine.torqueNm / 35)))}% for this engine's torque, with assisted clutch for repeatable pulls. This is a simulation starting point, not a dyno calibration.</p>
             <p>Current: {settings.dynoLoad}% · {settings.clutchMode} clutch.</p>
-            <Button variant="outline" size="sm" className="mt-2" onClick={() => { updateSettings({ dynoLoad: Math.round(Math.min(45, Math.max(18, 18 + vehicle.engine.torqueNm / 35))), clutchMode: "assisted" }); markSaved(); }}>Apply recommendation</Button>
+            <Button variant="outline" size="sm" className="mt-2" onClick={() => { updateSettings({ dynoLoad: Math.round(Math.min(45, Math.max(18, 18 + vehicle.engine.torqueNm / 35))) }); markSaved(); }}>Apply load</Button> <Button variant="outline" size="sm" className="mt-2" onClick={() => { updateSettings({ clutchMode: "assisted" }); markSaved(); }}>Apply clutch</Button>
             <Button variant="ghost" size="sm" className="mt-2" onClick={() => { updateSettings({ dynoLoad: DEFAULT_SETTINGS.dynoLoad, clutchMode: DEFAULT_SETTINGS.clutchMode }); markSaved(); }}>Restore simulation defaults</Button>
           </div>
           <div>
@@ -235,7 +235,7 @@ export function SettingsModal({
             <p className="label-xs text-accent">Recommended display starting point</p>
             <p className="mt-1">Graphics: {recommendedGraphics}; cluster: {recommendedCluster}. Graphics suggestion uses available CPU thread count as a rough device hint, not a benchmark. The cluster suggestion favours a classic display for diesel and sport otherwise.</p>
             <p>Current: {settings.graphics} graphics · {settings.cluster} cluster.</p>
-            <Button variant="outline" size="sm" className="mt-2" onClick={() => { updateSettings({ graphics: recommendedGraphics, cluster: recommendedCluster }); markSaved(); }}>Apply recommendation</Button>
+            <Button variant="outline" size="sm" className="mt-2" onClick={() => { updateSettings({ graphics: recommendedGraphics }); markSaved(); }}>Apply graphics</Button> <Button variant="outline" size="sm" className="mt-2" onClick={() => { updateSettings({ cluster: recommendedCluster }); markSaved(); }}>Apply cluster</Button>
             <Button variant="ghost" size="sm" className="mt-2" onClick={() => { updateSettings({ graphics: DEFAULT_SETTINGS.graphics, cluster: DEFAULT_SETTINGS.cluster }); markSaved(); }}>Restore display defaults</Button>
           </div>
           <div>
