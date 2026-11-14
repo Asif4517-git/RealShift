@@ -27,4 +27,11 @@ for (const mode of ['manual','assisted','auto'] as const) {
   sim.setInputs({clutch:0}); for(let i=0;i<1000;i++) sim.tick(1/120);
   assert(Number.isFinite(sim.rpm) && sim.wheelOmega > 0, mode);
 }
+const recording = new DynoSimulation(vehicle); recording.startEngine();
+for (let i=0;i<480;i++) recording.tick(1/120);
+recording.startPull(); recording.setInputs({throttle: 1});
+for (let i=0;i<600;i++) recording.tick(1/120);
+const run = recording.endPull(); assert(run?.vehicleSnapshot);
+const originalName = run.vehicleSnapshot.model; vehicle.model = 'Modified afterwards';
+assert.equal(run.vehicleSnapshot.model, originalName);
 console.log('Custom validation, construction and simulation checks passed.');

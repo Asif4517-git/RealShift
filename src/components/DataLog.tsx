@@ -18,7 +18,6 @@ import {
 } from "lucide-react";
 import { nf, speedUnit, speedValue, tempUnit, tempValue, torqueUnit, torqueValue, timeAgo } from "../lib/format";
 import { useStore } from "../lib/store";
-import { customVehicle } from "../lib/customVehicle";
 import { getVehicle, VEHICLES, type Vehicle } from "../lib/vehicles";
 import type { AppView } from "../lib/views";
 import { cn } from "../utils/cn";
@@ -43,15 +42,16 @@ export function DataLog({
   onOpenAudio: () => void;
   onOpenDatasheet: (vehicle: Vehicle) => void;
 }) {
-  const { runs, settings, deleteRun, clearRuns, updateAudio, customBuilds } = useStore();
+  const { runs, settings, deleteRun, clearRuns, updateAudio } = useStore();
   const [tab, setTab] = useState<Tab>("history");
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
   const [confirmClear, setConfirmClear] = useState(false);
   const units = settings.units;
 
   const selectedRun = useMemo(() => runs.find((r) => r.id === selectedRunId) ?? runs[0] ?? null, [runs, selectedRunId]);
-  const resolveVehicle = (id: string) => { const custom = customBuilds.find(b => b.id === id); return custom ? customVehicle(custom) : getVehicle(id); };
-  const chartVehicle = selectedRun ? resolveVehicle(selectedRun.vehicleId) : getVehicle("mustang-gt-2017");
+  // Legacy custom runs lack an immutable specification. Never substitute a different car.
+  const resolveRun = (run: typeof runs[number]): Vehicle | undefined => run.vehicleSnapshot ?? (run.vehicleId.startsWith("custom-") ? undefined : VEHICLES.find(v => v.id === run.vehicleId));
+  const chartVehicle = selectedRun ? resolveRun(selectedRun) : getVehicle("mustang-gt-2017");
   const bestRun = useMemo(() => runs.reduce((best, run) => (run.peakHp > (best?.peakHp ?? 0) ? run : best), null as (typeof runs)[number] | null), [runs]);
 
   const exportRuns = () => {
@@ -128,7 +128,7 @@ export function DataLog({
                 }
               />
               <div className="px-2 py-3 sm:px-4">
-                <DynoChart samples={selectedRun?.samples ?? []} vehicle={chartVehicle} units={units} height={240} showTorque />
+                {chartVehicle ? <DynoChart samples={selectedRun?.samples ?? []} vehicle={chartVehicle} units={units} height={240} showTorque /> : <p className="p-5 text-sm text-mut">This older run has no saved vehicle specification. Its recorded samples and peak values are retained, but a reference curve cannot be reconstructed reliably.</p>}
               </div>
               {selectedRun && (
                 <div className="grid grid-cols-2 divide-x divide-line-soft border-t border-line-soft sm:grid-cols-4">
@@ -184,7 +184,7 @@ export function DataLog({
                     </thead>
                     <tbody>
                       {runs.map((run) => {
-                        const v = resolveVehicle(run.vehicleId);
+                        const v = resolveRun(run);
                         const active = selectedRun?.id === run.id;
                         return (
                           <tr
@@ -199,8 +199,8 @@ export function DataLog({
                               </div>
                             </td>
                             <td className="px-4 py-2.5">
-                              <p className="text-[12px] text-[#d3ddd1]">{v.make} {v.model}</p>
-                              <p className="font-mono text-[9px] uppercase tracking-[0.05em] text-mut-2">{v.engine.code} · {v.year}</p>
+                              <p className="text-[12px] text-[#d3ddd1]">{run.label}</p>
+                              <p className="font-mono text-[9px] uppercase tracking-[0.05em] text-mut-2">{v ? `${v.engine.code} · ${v.year}` : "Original specification unavailable"}</p>
                             </td>
                             <td className="px-4 py-2.5 value-mono text-[12.5px] text-accent">{nf(run.peakHp, 1)}</td>
                             <td className="px-4 py-2.5 value-mono text-[11.5px] text-warm">{nf(torqueValue(run.peakTorque, units), 0)} <span className="text-[8.5px] text-mut-2">{torqueUnit(units)}</span></td>

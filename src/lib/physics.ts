@@ -27,6 +27,8 @@ export interface PullStats {
 export interface DynoRun {
   id: string;
   vehicleId: string;
+  /** Specification at recording time; older runs do not have this snapshot. */
+  vehicleSnapshot?: Vehicle;
   label: string;
   dateISO: string;
   peakHp: number;
@@ -350,6 +352,7 @@ export class DynoSimulation {
     return {
       id: `RUN-${String(Math.floor(Math.random() * 900) + 100)}`,
       vehicleId: this.vehicle.id,
+      vehicleSnapshot: structuredClone(this.vehicle),
       label: `${this.vehicle.make} ${this.vehicle.model}`,
       dateISO: new Date().toISOString(),
       peakHp: Math.round(p.peakHp * 10) / 10,
