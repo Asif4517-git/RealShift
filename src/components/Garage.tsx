@@ -15,6 +15,17 @@ import {
   Weight,
   Zap,
 } from "lucide-react";
+import hiluxPhoto from "../assets/cars/hilux-2018.jpg?inline";
+import fortunerPhoto from "../assets/cars/fortuner-2021.jpg?inline";
+import golfPhoto from "../assets/cars/golf-mk7.jpg?inline";
+import s2000Photo from "../assets/cars/s2000-ap1.jpg?inline";
+import bmw320Photo from "../assets/cars/bmw-320d-f30.jpg?inline";
+import mustangPhoto from "../assets/cars/mustang-gt.jpg?inline";
+import civicPhoto from "../assets/cars/civic-fk8.jpg?inline";
+import supraPhoto from "../assets/cars/gr-supra.jpg?inline";
+import m3Photo from "../assets/cars/m3-g80.jpg?inline";
+import { CustomEditor } from "./CustomEditor";
+import { customVehicle } from "../lib/customVehicle";
 import { DynoSimulation } from "../lib/physics";
 import { nf, torqueUnit, torqueValue } from "../lib/format";
 import { useStore } from "../lib/store";
@@ -24,6 +35,18 @@ import { cn } from "../utils/cn";
 import CarScene from "../three/CarScene";
 import { CarBlueprint, TorqueCurveBars } from "./gauges";
 import { Button, Chip, EqBars, Panel, SectionHeading, StatusDot } from "./ui";
+
+const PHOTOS: Record<string, { src: string; description: string }> = {
+  'hilux-2.8-2018': { src: hiluxPhoto, description: 'Hilux Invincible X 2.4, representative trim' },
+  'toyota-fortuner-2021-28-mt': { src: fortunerPhoto, description: 'Fortuner SRZ 2.7 petrol, representative trim' },
+  'golf-gti-mk7': { src: golfPhoto, description: 'Golf GTI Mk7, representative trim' },
+  's2000-ap1': { src: s2000Photo, description: 'Honda S2000 AP1, representative trim' },
+  'bmw-320d-f30': { src: bmw320Photo, description: 'BMW 320d F30, representative trim' },
+  'mustang-gt-2017': { src: mustangPhoto, description: 'Ford Mustang GT S550, representative trim' },
+  'civic-type-r-fk8-2017': { src: civicPhoto, description: 'Honda Civic Type R FK8, representative trim' },
+  'toyota-gr-supra-a90-2023-manual': { src: supraPhoto, description: 'GR Supra, representative trim' },
+  'bmw-m3-g80-2021-manual': { src: m3Photo, description: 'G80 M3 Competition, representative trim' },
+};
 
 type Filter = "all" | "petrol" | "diesel" | "turbo" | "na" | "4wd";
 
@@ -43,7 +66,7 @@ export function Garage({
   onNavigate: (view: AppView) => void;
   onOpenDatasheet: (vehicle: Vehicle) => void;
 }) {
-  const { vehicle, selectVehicle, settings } = useStore();
+  const { vehicle, selectVehicle, settings, customBuilds } = useStore();
   const [filter, setFilter] = useState<Filter>("all");
   const [query, setQuery] = useState("");
   const [paintIndex, setPaintIndex] = useState(0);
@@ -57,7 +80,7 @@ export function Garage({
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return VEHICLES.filter((candidate) => {
+    return [...VEHICLES, ...customBuilds.map(customVehicle)].filter((candidate) => {
       const matchesFilter =
         filter === "all" ||
         (filter === "petrol" && candidate.engine.fuel === "Petrol") ||
@@ -68,7 +91,7 @@ export function Garage({
       const haystack = `${candidate.make} ${candidate.model} ${candidate.variant} ${candidate.engine.code} ${candidate.engine.layout} ${candidate.tags.join(" ")}`.toLowerCase();
       return matchesFilter && (!q || haystack.includes(q));
     });
-  }, [filter, query]);
+  }, [filter, query, customBuilds]);
 
   const selectAndEnter = () => {
     onNavigate("dyno");
@@ -196,7 +219,7 @@ export function Garage({
             >
               {option.label}
               <span className="ml-1.5 text-[8.5px] opacity-60">
-                {option.id === "all" ? VEHICLES.length : VEHICLES.filter((v) =>
+                {option.id === "all" ? VEHICLES.length + customBuilds.length : [...VEHICLES, ...customBuilds.map(customVehicle)].filter((v) =>
                   option.id === "petrol" ? v.engine.fuel === "Petrol" :
                   option.id === "diesel" ? v.engine.fuel === "Diesel" :
                   option.id === "turbo" ? v.engine.aspiration.includes("Turbo") :
@@ -247,7 +270,8 @@ export function Garage({
                 </div>
               </div>
               <div className="relative mx-3 mt-1 overflow-hidden rounded-xl border border-white/[0.045] bg-[radial-gradient(ellipse_at_50%_20%,rgba(203,244,102,0.045),transparent_65%)] px-2 py-2">
-                <CarBlueprint vehicle={candidate} className="h-[78px] opacity-90 transition-opacity group-hover:opacity-100" />
+                {PHOTOS[candidate.id] ? <img src={PHOTOS[candidate.id].src} alt={PHOTOS[candidate.id].description} className="h-[78px] w-full rounded-lg object-cover" /> : <CarBlueprint vehicle={candidate} className="h-[78px] opacity-90 transition-opacity group-hover:opacity-100" />}
+                {PHOTOS[candidate.id] && <span className="absolute bottom-1 left-2 rounded bg-black/70 px-1 font-mono text-[8px] text-white">Representative trim · see photo credits below</span>}
                 <span className="absolute right-2 top-2 rounded border border-white/[0.07] px-1 py-0.5 font-mono text-[8px] uppercase tracking-[0.1em] text-mut-2">{ENGINE_TYPE_SHORT[candidate.sound.character]}</span>
               </div>
               <div className="grid grid-cols-3 divide-x divide-line-soft border-t border-line-soft">
@@ -268,6 +292,9 @@ export function Garage({
           );
         })}
       </div>
+
+      <p className="text-[11px] text-mut-2">Photo credits: <a className="underline" href="https://commons.wikimedia.org/wiki/File:2023_Toyota_Supra_(2).jpg" target="_blank" rel="noopener noreferrer">GR Supra — Calreyn88</a> and <a className="underline" href="https://commons.wikimedia.org/wiki/File:BMW_M3_Competition_(G80)_Auto_Zuerich_2021_IMG_0043.jpg" target="_blank" rel="noopener noreferrer">G80 M3 — Alexander Migl</a>, <a className="underline" href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noopener noreferrer">CC BY-SA 4.0</a>. Displayed with cropping; photos show representative trims. Additional photos: <a className="underline" href="https://commons.wikimedia.org/wiki/File:Volkswagen_Golf_GTI_Mk7_Deep_Black_Pearl_(1).jpg" target="_blank" rel="noopener noreferrer">Golf — Damian B Oh</a> and <a className="underline" href="https://commons.wikimedia.org/wiki/File:Honda_CIVIC_TYPE_R_(DBA-FK8)_front.jpg" target="_blank" rel="noopener noreferrer">Civic — Tokumeigakarinoaoshima</a> (CC BY-SA 4.0); <a className="underline" href="https://commons.wikimedia.org/wiki/File:2001_Honda_S2000_(5003700541)_(cropped).jpg" target="_blank" rel="noopener noreferrer">S2000 — Spanish Coches</a> and <a className="underline" href="https://commons.wikimedia.org/wiki/File:BMW_320d_F30_(7097736969).jpg" target="_blank" rel="noopener noreferrer">320d — nakhon100</a> (<a className="underline" href="https://creativecommons.org/licenses/by/2.0/" target="_blank" rel="noopener noreferrer">CC BY 2.0</a>); <a className="underline" href="https://commons.wikimedia.org/wiki/File:Ford_Mustang_GT,_20.5.2017_(2).jpg" target="_blank" rel="noopener noreferrer">Mustang — DariuszSankowski</a> (<a className="underline" href="https://creativecommons.org/publicdomain/zero/1.0/" target="_blank" rel="noopener noreferrer">CC0</a>). <a className="underline" href="https://commons.wikimedia.org/wiki/File:2018_Toyota_Hilux_Invincible_X_D-4d_4WD_2.4_Front.jpg" target="_blank" rel="noopener noreferrer">Hilux — Vauxford</a> and <a className="underline" href="https://commons.wikimedia.org/wiki/File:2021_Toyota_Fortuner_SRZ_2.7_4x2_(Indonesia)_front_view_01.jpg" target="_blank" rel="noopener noreferrer">Fortuner — Andra Febrian</a> (CC BY-SA 4.0; pictured trims differ from the simulated vehicles). Other cards use original blueprints.</p>
+      <CustomEditor />
 
       {filtered.length === 0 && (
         <Panel className="flex flex-col items-center justify-center gap-2 px-5 py-14 text-center">

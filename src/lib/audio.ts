@@ -2,12 +2,17 @@
 // simulated RPM. A procedural fallback is used only when decoding fails.
 // Sources, approximations, and missing load bands: src/assets/engine/MANIFEST.md.
 
+import i3Idle from "../assets/engine/i3_idle.mp3?inline";
 import i4Idle from "../assets/engine/i4s_idle.mp3?inline";
 import i4Rev from "../assets/engine/i4_rev.mp3?inline";
 import i4RevB from "../assets/engine/i4b_rev.mp3?inline";
 import s2000High from "../assets/engine/i4hi_hi.mp3?inline";
 import dieselIdle from "../assets/engine/d4s_idle.mp3?inline";
 import dieselRev from "../assets/engine/d4s_rev.mp3?inline";
+import i6Idle from "../assets/engine/i6_idle.mp3?inline";
+import i6TurboRev from "../assets/engine/i6t_rev.mp3?inline";
+import v8Crank from "../assets/engine/v8_crank.mp3?inline";
+import v8Mid from "../assets/engine/v8xbb_rev.mp3?inline";
 import v8Idle from "../assets/engine/v8x57_idle.mp3?inline";
 import v8Rev from "../assets/engine/v8x57_rev.mp3?inline";
 import v8High from "../assets/engine/v8xsc_hi.mp3?inline";
@@ -15,6 +20,7 @@ import v6Idle from "../assets/engine/v6_idle.mp3?inline";
 import v6Rev from "../assets/engine/v6_rev.mp3?inline";
 import flatMid from "../assets/engine/f6_mid.mp3?inline";
 import flatHigh from "../assets/engine/f6_hi.mp3?inline";
+import { recordedFamily } from "./audioFamilies";
 import type { SimEvent, SimSnapshot } from "./physics";
 import type { Vehicle } from "./vehicles";
 
@@ -434,7 +440,10 @@ export class EngineAudio {
   private exhaustFactor = 1;
   private intakeFactor = 1;
   private modelsReady = false;
+  private fallback = false;
   private rendering = false;
+  private decoded = new Map<string, AudioBuffer>();
+  private starterBuffer: AudioBuffer | null = null;
   private audioPeak = 0;
   private audioRms = 0;
   private started = false;
@@ -452,6 +461,10 @@ export class EngineAudio {
     return this.modelsReady;
   }
 
+  get usingFallback() {
+    return this.fallback;
+  }
+
   async ensureStarted() {
     if (!this.ctx) this.build();
     if (this.ctx && this.ctx.state === "suspended") {
@@ -467,11 +480,12 @@ export class EngineAudio {
   }
 
   setVehicle(vehicle: Vehicle) {
-    const changed = vehicle.id !== this.vehicle.id;
+    const changed = vehicle !== this.vehicle;
     this.vehicle = vehicle;
     this.voice = buildVoice(vehicle);
     if (!changed || !this.ctx) return;
     this.stopBandSources();
+    this.starterBuffer = null;
     this.modelsReady = false;
     void this.renderModels();
   }
@@ -491,15 +505,11 @@ export class EngineAudio {
   }
 
   setQuality(quality: AudioQuality) {
-    const changed = this.quality !== quality;
     this.quality = quality;
     if (!this.ctx) return;
     this.spatialLowpass.Q.value = quality === "high" ? 0.85 : 0.6;
     this.rollerFilter.Q.value = quality === "high" ? 1.4 : 0.7;
-    if (changed && this.modelsReady) {
-      this.modelsReady = false;
-      void this.renderModels();
-    }
+
   }
 
   setCamera(camera: CameraPresetAudio) {
@@ -535,33 +545,60 @@ export class EngineAudio {
     this.rendering = true;
     const vehicle = this.vehicle;
     const voice = this.voice;
+    const context = this.ctx;
     // Sample anchor RPMs were measured by the loop editor; see the manifest.
     // Non-matching vehicles are explicitly approximate, not OEM recordings.
-    const clips: [string, number][] = voice.diesel
+    const family = recordedFamily(vehicle.engine.layout, voice.cylinders, voice.diesel);
+    const clips: [string, number][] = family === "diesel-i4"
       ? [[dieselIdle, 887], [dieselRev, 2191]]
-      : vehicle.engine.layout.includes("Flat")
-        ? [[v6Idle, 651], [flatMid, 3706], [flatHigh, 5193]]
-        : voice.cylinders === 8
-          ? [[v8Idle, 805], [v8Rev, 1444], [v8High, 6478]]
-          : voice.cylinders === 6
-            ? [[v6Idle, 651], [v6Rev, 4111]]
-            : [[i4Idle, 877], [i4Rev, 2274], [vehicle.engine.code === "F20C" ? s2000High : i4RevB, vehicle.engine.code === "F20C" ? 7317 : 2529]];
+      : family === "petrol-i3" ? [[i3Idle, 880]]
+      : family === "petrol-flat6" ? [[v6Idle, 651], [flatMid, 3706], [flatHigh, 5193]]
+      : family === "petrol-v8" ? [[v8Idle, 805], [v8Rev, 1444], [v8Mid, 2265], [v8High, 6478]]
+      : family === "petrol-i6" ? [[i6Idle, 757], [i6TurboRev, 3530]]
+      : family === "petrol-v6" ? [[v6Idle, 651], [v6Rev, 4111]]
+      : family === "petrol-i4" ? [[i4Idle, 877], [i4Rev, 2274], [vehicle.engine.code === "F20C" ? s2000High : i4RevB, vehicle.engine.code === "F20C" ? 7317 : 2529]]
+      : [];
     let buffers: AudioBuffer[];
+    let fallback = false;
+    let starterBuffer: AudioBuffer | null = null;
     try {
+      if (!family) throw new Error("No recording for this engine family");
       buffers = await Promise.all(clips.map(async ([url]) => {
+        const cached = this.decoded.get(url);
+        if (cached) return cached;
         const response = await fetch(url);
         if (!response.ok) throw new Error(`Audio sample: ${response.status}`);
-        return this.ctx!.decodeAudioData(await response.arrayBuffer());
+        const buffer = await context.decodeAudioData(await response.arrayBuffer());
+        if (this.ctx === context) this.decoded.set(url, buffer);
+        return buffer;
       }));
+      // A separately recorded V8 starter is optional; it is never treated as an
+      // engine-speed loop. Other families continue to use the procedural starter.
+      if (family === "petrol-v8") {
+        try {
+          starterBuffer = this.decoded.get(v8Crank) ?? null;
+          if (!starterBuffer) {
+            const response = await fetch(v8Crank);
+            if (!response.ok) throw new Error(`Starter sample: ${response.status}`);
+            starterBuffer = await context.decodeAudioData(await response.arrayBuffer());
+            if (this.ctx === context) this.decoded.set(v8Crank, starterBuffer);
+          }
+        } catch (error) {
+          console.warn("Recorded starter unavailable; using synthetic starter", error);
+        }
+      }
     } catch (error) {
+      if (this.ctx !== context || vehicle !== this.vehicle) { this.rendering = false; if (this.ctx === context) void this.renderModels(); return; }
+      fallback = true;
       console.warn("Recorded engine audio unavailable; using synthetic fallback", error);
       const rate = this.ctx.sampleRate;
       buffers = [voice.idleRpm, voice.redline * 0.46, voice.redline * 0.85]
         .map((rpm) => makeBuffer(this.ctx!, renderEngineLoop(voice, rpm, rate, 1.15)));
       clips.splice(0, clips.length, ["", voice.idleRpm], ["", voice.redline * 0.46], ["", voice.redline * 0.85]);
     }
-    if (!this.ctx || vehicle.id !== this.vehicle.id) {
+    if (this.ctx !== context || vehicle !== this.vehicle) {
       this.rendering = false;
+      if (this.ctx === context) void this.renderModels();
       return;
     }
     this.stopBandSources();
@@ -578,13 +615,15 @@ export class EngineAudio {
       this.bandGains.push(gain);
     }
     this.bandAnchors = clips.map((clip) => clip[1]);
+    this.fallback = fallback;
+    this.starterBuffer = starterBuffer;
     this.modelsReady = true;
     this.rendering = false;
     this.setVolumes(this.volumes);
     this.applyCamera();
     // prime band levels without a jump
     const snapshot = {
-      rpm: voice.idleRpm, idleRpm: voice.idleRpm, redline: voice.redline, throttle: 0,
+      rpm: voice.idleRpm, idleRpm: voice.idleRpm, redline: voice.redline, throttle: 0, effectiveThrottle: 0,
     } as unknown as SimSnapshot;
     this.updateBands(snapshot, true);
   }
@@ -677,7 +716,7 @@ export class EngineAudio {
     this.engineGain.connect(this.engineBus);
     const engineSend = ctx.createGain();
     engineSend.gain.value = 0.22;
-    this.spatialPanner.connect(engineSend);
+    this.engineGain.connect(engineSend);
     engineSend.connect(this.reverb);
 
     // Exhaust EQ + gain (fed from the same combustion voice, band-limited)
@@ -696,7 +735,7 @@ export class EngineAudio {
     this.exhaustGain.connect(this.exhaustBus);
     const exhaustSend = ctx.createGain();
     exhaustSend.gain.value = 0.34;
-    this.exhaustGain.connect(exhaustSend);
+    this.exhaustBus.connect(exhaustSend);
     exhaustSend.connect(this.reverb);
 
     // Intake: a separate band-passed path from the same rendered combustion
@@ -871,7 +910,8 @@ export class EngineAudio {
           vehicle: self.vehicle.id,
           character: self.vehicle.sound.character,
           ctx: self.ctx?.state,
-          model: "recorded-engine-loops",
+          model: self.fallback ? "synthetic-fallback" : "recorded-engine-loops",
+          starter: self.starterBuffer ? "recorded-v8" : "synthetic",
         };
       },
       profile() {
@@ -883,7 +923,7 @@ export class EngineAudio {
   private updateBands(state: SimSnapshot, immediate = false) {
     if (!this.ctx) return;
     const rpm = Math.max(0, state.rpm);
-    const load = state.throttle;
+    const load = state.effectiveThrottle;
     const ratio = Math.min(1.1, rpm / this.voice.redline);
     const anchors = this.bandAnchors;
     const weights = anchors.map(() => 0);
@@ -936,7 +976,7 @@ export class EngineAudio {
     // Turbocharger — pressure-driven spool, not throttle binary
     const boostRatio = state.boostMax > 0 ? Math.min(1.1, state.boostBar / state.boostMax) : 0;
     if (this.voice.turbo) {
-      const spool = Math.max(0, boostRatio) * (0.35 + state.throttle * 0.9);
+      const spool = state.engineOn ? Math.max(0, boostRatio) * (0.35 + state.effectiveThrottle * 0.9) : 0;
       this.set(this.turboGain.gain, spool * 0.055, 0.12);
       this.set(this.turboNoiseGain.gain, spool * 0.09, 0.16);
       this.set(this.turboWhistle.frequency, 2600 + boostRatio * 3600 + ratio * 1200, 0.15);
@@ -948,10 +988,10 @@ export class EngineAudio {
     }
 
     // Load, overrun and clutch state shape the engine timbre.
-    const load = state.throttle;
+    const load = state.effectiveThrottle;
     const freeRev = state.clutch > 0.5 || state.gear === 0;
-    const overrun = state.throttle < 0.08 && state.rpm > this.voice.idleRpm * 1.8 && state.engineOn;
-    const tractionLoad = clamp01((state.throttle * 0.75) + (state.clutch < 0.5 && state.gear !== 0 ? 0.25 : 0));
+    const overrun = state.effectiveThrottle < 0.08 && state.rpm > this.voice.idleRpm * 1.8 && state.engineOn;
+    const tractionLoad = clamp01(Math.max(0, state.clutchTorqueNm) / Math.max(1, this.vehicle.gearbox.clutchCapacityNm));
     this.set(this.exhaustFilter.Q, overrun ? 2.1 : 1.1, 0.12);
     this.set(this.intakeGain.gain, this.volumes.intake * this.intakeFactor * (overrun ? 0.16 : 0.4 + load * 0.85 + ratio * 0.3), 0.1);
     this.set(this.exhaustGain.gain, this.exhaustFactor * (overrun ? 0.72 : 0.86 + tractionLoad * 0.3), 0.12);
@@ -988,16 +1028,12 @@ export class EngineAudio {
         this.starter(now);
         break;
 
-      case "shutdown":
-        this.shutdown(now);
-        break;
+
       case "bov":
         this.blowOff(now);
         break;
 
-      case "pop":
-        this.crackle(now, 1);
-        break;
+
 
       default:
         break;
@@ -1007,6 +1043,22 @@ export class EngineAudio {
   private starter(time: number) {
     if (!this.ctx) return;
     const ctx = this.ctx;
+    // The first 0.92 s of the Corvette recording covers the simulated crank;
+    // fade the cut so it does not abruptly overlap the live idle loops.
+    if (this.starterBuffer) {
+      const source = ctx.createBufferSource();
+      const gain = ctx.createGain();
+      const duration = Math.min(0.92, this.starterBuffer.duration);
+      source.buffer = this.starterBuffer;
+      gain.gain.setValueAtTime(0, time);
+      gain.gain.linearRampToValueAtTime(0.35, time + 0.025);
+      gain.gain.setValueAtTime(0.35, time + Math.max(0.025, duration - 0.12));
+      gain.gain.linearRampToValueAtTime(0, time + duration);
+      source.connect(gain); gain.connect(this.transBus);
+      source.start(time); source.stop(time + duration);
+      source.onended = () => { source.disconnect(); gain.disconnect(); };
+      return;
+    }
     const duration = 0.95;
     const osc = ctx.createOscillator();
     const motor = ctx.createOscillator();
@@ -1038,32 +1090,6 @@ export class EngineAudio {
     this.burst(0.6, 1800, 0.05, this.transBus, 1.3);
   }
 
-  private shutdown(time: number) {
-    if (!this.ctx) return;
-    const ctx = this.ctx;
-    for (const gain of this.bandGains) {
-      gain.gain.cancelScheduledValues(time);
-      gain.gain.setTargetAtTime(0, time, 0.08);
-    }
-    const osc = ctx.createOscillator();
-    osc.type = "sine";
-    const gain = ctx.createGain();
-    osc.frequency.setValueAtTime(140, time);
-    osc.frequency.exponentialRampToValueAtTime(32, time + 0.55);
-    gain.gain.setValueAtTime(0.1, time);
-    gain.gain.exponentialRampToValueAtTime(0.0001, time + 0.6);
-    osc.connect(gain);
-    gain.connect(this.exhaustBus);
-    osc.start(time);
-    osc.stop(time + 0.62);
-    this.crackle(time + 0.08, 0.35);
-  }
-
-  private crackle(_time: number, level: number) {
-    this.burst(0.11, 450 + Math.random() * 900, 0.11 * level, this.exhaustBus, 0.9);
-    this.burst(0.05, 1800 + Math.random() * 1600, 0.06 * level, this.exhaustBus, 1.4);
-  }
-
   private blowOff(_time: number) {
     this.burst(0.24, 3300, 0.11, this.turboBus, 3.2);
     this.burst(0.35, 1400, 0.05, this.turboBus, 1.1);
@@ -1092,6 +1118,8 @@ export class EngineAudio {
 
   dispose() {
     this.stopBandSources();
+    this.decoded.clear();
+    this.starterBuffer = null;
     if (this.ctx) {
       void this.ctx.close();
       this.ctx = null;

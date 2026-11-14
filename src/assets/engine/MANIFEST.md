@@ -40,3 +40,23 @@ The original asset pages and licence notices were checked on 2026-11-13.
 * Sonniss's engine, idle and rev catalogues were reviewed. Their commercial
   libraries require acquisition; the free GDC bundle's [v2 licence](https://sonniss.com/gdc-bundle-license/)
   restricts distribution of sounds as sounds. No Sonniss assets are included.
+
+## Additional loops
+
+The following edited loops were obtained from [350Chev at 022cc9d](https://github.com/Jxstrr0/350Chev/tree/022cc9db447990dd94f0f02fbc8e905396e27e95/sounds); processing and anchor RPMs are described in its credits as above. The original licence notices were checked individually.
+
+| Asset | Original recording / author | Licence | Approximate anchor |
+|---|---|---|---|
+| i6_idle.mp3 | [1988 BMW 320](https://freesound.org/people/ninebilly/sounds/173005/), ninebilly | CC0 1.0 | 757 rpm, inline-six |
+| i6t_rev.mp3 | [Toyota Supra dyno](https://freesound.org/people/editboy23/sounds/496171/), editboy23 | CC0 1.0 | 3530 rpm, turbo inline-six |
+| v8xbb_rev.mp3 | [Ford 460 V8](https://freesound.org/people/Henaway/sounds/127980/), Henaway | CC0 1.0 | 2265 rpm, V8 |
+
+Inline-six custom builds use the BMW/Supra bank as an approximation; the Supra recording is not necessarily representative of other inline-six engines. The V8 rev loop fills an intermediate band; it does not make the Mustang recording vehicle-specific. There are still no independently recorded load, release or shutdown bands for these vehicles.
+
+| Asset | Original recording / author | Licence | Approximate anchor |
+|---|---|---|---|
+| i3_idle.mp3 | [Volkswagen three-cylinder start and idle](https://freesound.org/people/rodrigocswm/sounds/584878/), rodrigocswm | CC0 1.0 | 880 rpm, inline-three |
+
+The i20 and three-cylinder custom builds use this idle loop as a rough approximation, not an i20 recording. There is no three-cylinder high-rpm recording in the bank: playback rate is bounded, so high-rpm pitch is not accurate. This needs a suitable licensed recorded rev band and listening validation.
+
+`v8_crank.mp3` is an edited 1.75-second one-shot from [kyles' Corvette engine start/idle recording](https://freesound.org/people/kyles/sounds/637184/), [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/), via [350Chev](https://github.com/Jxstrr0/350Chev/blob/022cc9db447990dd94f0f02fbc8e905396e27e95/sounds/CREDITS.md). The simulator fades out its first 0.92 seconds to match the crank period on V8s; it is a generic Corvette starter, not a Mustang-specific recording. Other families still use a synthetic starter. This has not been listen-tested.

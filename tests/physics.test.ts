@@ -3,7 +3,7 @@ import { DynoSimulation, type ClutchMode } from '../src/lib/physics';
 import { VEHICLES } from '../src/lib/vehicles';
 const dt = 1 / 120;
 function run(sim: DynoSimulation, seconds: number) { for (let i = 0; i < seconds / dt; i++) sim.tick(dt); }
-for (const vehicle of [VEHICLES[0], VEHICLES.find(v => v.engine.fuel === 'Diesel')!, VEHICLES.find(v => v.engine.cylinders === 8)!]) {
+for (const vehicle of VEHICLES) {
   for (const mode of ['manual', 'assisted', 'auto'] as ClutchMode[]) {
     const sim = new DynoSimulation(vehicle); sim.setClutchMode(mode); sim.startEngine(); run(sim, 5);
     assert(sim.engineOn, `${vehicle.id} ${mode}: start`);
@@ -49,3 +49,30 @@ for (const vehicle of [VEHICLES[0], VEHICLES.find(v => v.engine.fuel === 'Diesel
   assert(sim.rpm >= 0 && sim.rpm <= sim.vehicle.engine.limiter + 220);
 }
 console.log('Unsafe downshift, manual stall and 180-second fixed-step stability passed.');
+
+for (const vehicle of VEHICLES) {
+  // With the clutch open, selecting any gear cannot inject energy into idle.
+  const sim = new DynoSimulation(vehicle); sim.clutchMode = 'manual'; sim.startEngine(); run(sim, 4);
+  sim.setInputs({clutch: 1}); run(sim, 0.4);
+  const idle = sim.rpm;
+  for (let gear = 1; gear <= vehicle.gearbox.speeds; gear++) {
+    const beforeSelection = sim.rpm; sim.selectGear(gear); assert.equal(sim.rpm, beforeSelection, `${vehicle.id} gear selection`);
+    run(sim, 0.05); assert(Math.abs(sim.rpm - idle) < 100, `${vehicle.id} open clutch idle`);
+  }
+  // Assisted downshift must not teleport the engine or exceed the safety threshold.
+  const down = new DynoSimulation(vehicle); down.clutchMode = 'assisted'; down.engineOn = true; down.gear = 2;
+  down.wheelOmega = vehicle.engine.idleRpm * 2 * (2 * Math.PI / 60) / (vehicle.gearbox.ratios[0] * vehicle.gearbox.finalDrive);
+  down.rpm = down.wheelOmega * vehicle.gearbox.ratios[1] * vehicle.gearbox.finalDrive * 60 / (2 * Math.PI);
+  const old = down.rpm; down.selectGear(1); assert.equal(down.gear, 1); assert.equal(down.rpm, old);
+  run(down, 0.15); assert(down.rpm > old, `${vehicle.id} downshift blip`);
+  assert(down.rpm < vehicle.engine.limiter + 220);
+}
+console.log('All vehicle clutch-isolation and assisted downshift checks passed.');
+// Shift torque cut must be visible to audio even if the driver's pedal stays down.
+{
+  const sim = new DynoSimulation(VEHICLES[0]); sim.clutchMode = 'assisted'; sim.startEngine(); run(sim, 3);
+  sim.selectGear(1); sim.setInputs({throttle: 0.8}); run(sim, 4);
+  sim.selectGear(2); run(sim, 0.05);
+  const state = sim.snapshot(); assert(state.throttle > 0.5); assert.equal(state.effectiveThrottle, 0);
+}
+console.log('Assisted shift torque cut is exposed to audio.');
