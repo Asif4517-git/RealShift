@@ -11,6 +11,7 @@ import dieselIdle from "../assets/engine/d4s_idle.mp3?inline";
 import dieselRev from "../assets/engine/d4s_rev.mp3?inline";
 import i6Idle from "../assets/engine/i6_idle.mp3?inline";
 import i6TurboRev from "../assets/engine/i6t_rev.mp3?inline";
+import v8Crank from "../assets/engine/v8_crank.mp3?inline";
 import v8Mid from "../assets/engine/v8xbb_rev.mp3?inline";
 import v8Idle from "../assets/engine/v8x57_idle.mp3?inline";
 import v8Rev from "../assets/engine/v8x57_rev.mp3?inline";
@@ -441,6 +442,7 @@ export class EngineAudio {
   private fallback = false;
   private rendering = false;
   private decoded = new Map<string, AudioBuffer>();
+  private starterBuffer: AudioBuffer | null = null;
   private audioPeak = 0;
   private audioRms = 0;
   private started = false;
@@ -482,6 +484,7 @@ export class EngineAudio {
     this.voice = buildVoice(vehicle);
     if (!changed || !this.ctx) return;
     this.stopBandSources();
+    this.starterBuffer = null;
     this.modelsReady = false;
     void this.renderModels();
   }
@@ -559,6 +562,7 @@ export class EngineAudio {
             : [[i4Idle, 877], [i4Rev, 2274], [vehicle.engine.code === "F20C" ? s2000High : i4RevB, vehicle.engine.code === "F20C" ? 7317 : 2529]];
     let buffers: AudioBuffer[];
     let fallback = false;
+    let starterBuffer: AudioBuffer | null = null;
     try {
       buffers = await Promise.all(clips.map(async ([url]) => {
         const cached = this.decoded.get(url);
@@ -569,6 +573,21 @@ export class EngineAudio {
         if (this.ctx === context) this.decoded.set(url, buffer);
         return buffer;
       }));
+      // A separately recorded V8 starter is optional; it is never treated as an
+      // engine-speed loop. Other families continue to use the procedural starter.
+      if (!voice.diesel && voice.cylinders === 8 && vehicle.engine.layout.includes("V")) {
+        try {
+          starterBuffer = this.decoded.get(v8Crank) ?? null;
+          if (!starterBuffer) {
+            const response = await fetch(v8Crank);
+            if (!response.ok) throw new Error(`Starter sample: ${response.status}`);
+            starterBuffer = await context.decodeAudioData(await response.arrayBuffer());
+            if (this.ctx === context) this.decoded.set(v8Crank, starterBuffer);
+          }
+        } catch (error) {
+          console.warn("Recorded starter unavailable; using synthetic starter", error);
+        }
+      }
     } catch (error) {
       if (this.ctx !== context || vehicle !== this.vehicle) { this.rendering = false; if (this.ctx === context) void this.renderModels(); return; }
       fallback = true;
@@ -598,6 +617,7 @@ export class EngineAudio {
     }
     this.bandAnchors = clips.map((clip) => clip[1]);
     this.fallback = fallback;
+    this.starterBuffer = starterBuffer;
     this.modelsReady = true;
     this.rendering = false;
     this.setVolumes(this.volumes);
@@ -892,6 +912,7 @@ export class EngineAudio {
           character: self.vehicle.sound.character,
           ctx: self.ctx?.state,
           model: self.fallback ? "synthetic-fallback" : "recorded-engine-loops",
+          starter: self.starterBuffer ? "recorded-v8" : "synthetic",
         };
       },
       profile() {
@@ -1023,6 +1044,22 @@ export class EngineAudio {
   private starter(time: number) {
     if (!this.ctx) return;
     const ctx = this.ctx;
+    // The first 0.92 s of the Corvette recording covers the simulated crank;
+    // fade the cut so it does not abruptly overlap the live idle loops.
+    if (this.starterBuffer) {
+      const source = ctx.createBufferSource();
+      const gain = ctx.createGain();
+      const duration = Math.min(0.92, this.starterBuffer.duration);
+      source.buffer = this.starterBuffer;
+      gain.gain.setValueAtTime(0, time);
+      gain.gain.linearRampToValueAtTime(0.35, time + 0.025);
+      gain.gain.setValueAtTime(0.35, time + Math.max(0.025, duration - 0.12));
+      gain.gain.linearRampToValueAtTime(0, time + duration);
+      source.connect(gain); gain.connect(this.transBus);
+      source.start(time); source.stop(time + duration);
+      source.onended = () => { source.disconnect(); gain.disconnect(); };
+      return;
+    }
     const duration = 0.95;
     const osc = ctx.createOscillator();
     const motor = ctx.createOscillator();
@@ -1083,6 +1120,7 @@ export class EngineAudio {
   dispose() {
     this.stopBandSources();
     this.decoded.clear();
+    this.starterBuffer = null;
     if (this.ctx) {
       void this.ctx.close();
       this.ctx = null;

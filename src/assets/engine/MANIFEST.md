@@ -58,3 +58,5 @@ Inline-six custom builds use the BMW/Supra bank as an approximation; the Supra r
 | i3_idle.mp3 | [Volkswagen three-cylinder start and idle](https://freesound.org/people/rodrigocswm/sounds/584878/), rodrigocswm | CC0 1.0 | 880 rpm, inline-three |
 
 The i20 and three-cylinder custom builds use this idle loop as a rough approximation, not an i20 recording. There is no three-cylinder high-rpm recording in the bank: playback rate is bounded, so high-rpm pitch is not accurate. This needs a suitable licensed recorded rev band and listening validation.
+
+`v8_crank.mp3` is an edited 1.75-second one-shot from [kyles' Corvette engine start/idle recording](https://freesound.org/people/kyles/sounds/637184/), [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/), via [350Chev](https://github.com/Jxstrr0/350Chev/blob/022cc9db447990dd94f0f02fbc8e905396e27e95/sounds/CREDITS.md). The simulator fades out its first 0.92 seconds to match the crank period on V8s; it is a generic Corvette starter, not a Mustang-specific recording. Other families still use a synthetic starter. This has not been listen-tested.

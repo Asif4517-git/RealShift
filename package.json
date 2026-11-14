@@ -10,7 +10,9 @@
     "test:physics": "esbuild tests/physics.test.ts --bundle --platform=node --format=esm --outfile=/tmp/realshift-physics-test.mjs && node /tmp/realshift-physics-test.mjs",
     "test:custom": "esbuild tests/custom.test.ts --bundle --platform=node --format=esm --outfile=/tmp/realshift-custom-test.mjs && node /tmp/realshift-custom-test.mjs",
     "test:browser": "node tests/browser-smoke.mjs",
-    "test:audio-fallback": "node tests/audio-fallback.mjs"
+    "test:audio-fallback": "node tests/audio-fallback.mjs",
+    "test:custom-browser": "node tests/custom-browser.mjs",
+    "test:audio-v8": "node tests/audio-v8-browser.mjs"
   },
   "dependencies": {
     "clsx": "2.1.1",
