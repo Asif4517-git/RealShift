@@ -1142,6 +1142,21 @@ export const VEHICLES: Vehicle[] = [
     estimated:["Gear and final-drive ratios", "Kerb weight for this trim", "Idle and limiter", "Torque curve", "Inertia", "Friction", "Clutch capacity", "Boost", "Losses and wheel power"],
     sources:[{label:"Autocar India — 2023 facelift and manual gearbox",url:"https://www.autocarindia.com/car-news/hyundai-i20-n-line-facelift-launched-at-rs-999-lakh-429372"},{label:"i20 N Line engine and dimensions",url:"https://www.carandbike.com/hyundai-cars/i20-n-line/specifications"}],notes:"Indian 2023 facelift, conventional manual rather than the earlier iMT. Gear ratios are provisional estimates.",
   },
+
+  {
+    id:"toyota-fortuner-2021-28-mt",make:"Toyota",model:"Fortuner",variant:"2.8 Diesel 4x2 MT",year:2021,generation:"AN160 facelift · India",bodyStyle:"SUV",country:"Japan",tags:["Turbo diesel", "SUV", "RWD"],
+    paint:[{name:"Super White",hex:"#e8ebe8"},{name:"Attitude Black",hex:"#1b1d1c"},{name:"Silver Metallic",hex:"#8c9595"}],
+    engine:{code:"1GD-FTV",displacementCc:2755,cylinders:4,layout:"Inline-4",induction:"Turbo diesel common rail",aspiration:"Turbo Diesel",powerHp:201,powerRpm:3400,torqueNm:420,torqueRpm:"1,400–3,400 rpm",idleRpm:760,redline:4400,limiter:4600,compression:"15.6:1",boostBar:1.7,fuel:"Diesel",flywheelInertia:0.36,frictionTorque:52,crankingRpm:210,
+      torqueCurve:[{rpm:800,nm:270},{rpm:1400,nm:420},{rpm:2200,nm:420},{rpm:3400,nm:420},{rpm:3900,nm:345},{rpm:4400,nm:265},{rpm:4600,nm:215}]},
+    gearbox:{type:"6-speed manual",speeds:6,ratios:[4.78,2.72,1.68,1.14,0.86,0.68],reverse:4.3,finalDrive:3.91,drivetrain:"RWD",efficiency:0.9,clutchCapacityNm:560},
+    chassis:{weightKg:2050,lengthMm:4795,widthMm:1855,heightMm:1835,wheelbaseMm:2745,tyre:"265/65R17",wheelDiameterIn:17},
+    dyno:{peakPowerHp:201,measuredWheelHp:181,driveLoss:0.1,note:"Wheel power is an estimated drivetrain loss, not a physical measurement."},
+    sound:{character:"turbo-diesel-i4",label:"Turbo diesel approximation",description:"VW Beetle TDI recordings approximate a four-cylinder diesel, not the 1GD-FTV.",firingNote:"Four-cylinder diesel, two firing events per revolution",layers:["Diesel idle", "Diesel rev", "Turbo approximation"],turbo:true,diesel:true,resonanceHz:54,rasp:0.7,revHappiness:0.52},
+    verified:["2755 cc turbo diesel", "201 bhp @ 3400 rpm", "420 Nm manual", "RWD 6-speed manual", "265/65R17 tyres"],
+    estimated:["Gear and final-drive ratios", "Trim kerb weight", "Idle and limiter rpm", "Torque curve", "Inertia", "Friction", "Clutch capacity", "Boost", "Losses and wheel power"],
+    sources:[{label:"Fortuner 2.8 4x2 manual specifications",url:"https://www.cartrade.com/toyota-cars/fortuner/4x2-2wd-diesel-28l-turbo-6-speed-manual/"},{label:"Autocar India — 2.8 diesel manual",url:"https://www.autocarindia.com/cars/toyota/fortuner/2.8l-diesel-4x2-mt"}],
+    notes:"Indian facelift RWD manual; related to the Hilux's 1GD-FTV but with a revised power rating. Gear ratios and kerb weight are provisional estimates.",
+  },
 ];
 
 export const getVehicle = (id: string) =>
