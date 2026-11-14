@@ -159,6 +159,8 @@ export function useDyno(inputEnabled: boolean) {
         audio.playEvent(event);
         if (event === "gear-reject") {
           showNotice({ kind: "warn", text: "Clutch required. Press and hold the clutch before shifting." });
+        } else if (event === "overrev-reject") {
+          showNotice({ kind: "warn", text: "Gear rejected: roller speed would mechanically over-rev the engine." });
         } else if (event === "start-refused") {
           showNotice({ kind: "warn", text: "Select neutral or press the clutch before cranking." });
         } else if (event === "stall") {

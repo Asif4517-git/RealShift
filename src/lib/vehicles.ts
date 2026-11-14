@@ -1,8 +1,8 @@
 // REALSHIFT vehicle database.
 // Manufacturer headline figures are taken from published specifications.
 // Items marked `estimated: true` are inferred / simulation-calibrated values.
-// Original procedural 3D bodies and synthesised engine models are used; no
-// manufacturer CAD, game-ripped assets or copyrighted recordings are included.
+// Original procedural 3D bodies and licensed, approximate engine recordings are used;
+// see src/assets/engine/MANIFEST.md. No manufacturer CAD or game-ripped assets.
 
 export type SoundCharacter =
   | "na-petrol-i4"

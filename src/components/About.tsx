@@ -95,7 +95,7 @@ export function About({ onNavigate, onOpenControls }: { onNavigate: (view: AppVi
             {[
               { icon: Gauge, title: "Engine simulation", text: "Flywheel inertia, friction, idle governors, turbo spool and a hard rev limiter. Torque curves are interpolated from each vehicle's published anchors.", tag: "physics" },
               { icon: Wrench, title: "Clutch & manual gearbox", text: "Manual, assisted and bypass clutch modes. Real gear counts and ratios, slip coupling, driveline lock-up and stall behaviour.", tag: "drivetrain" },
-              { icon: Volume2, title: "Layered engine audio", text: "A Web Audio engine synthesiser with firing-frequency harmonics, intake, exhaust, turbo, diesel clatter, transmission and roller layers.", tag: "audio" },
+              { icon: Volume2, title: "Layered engine audio", text: "Web Audio blends recorded engine-family loops with modelled intake, turbo and roller layers.", tag: "audio" },
               { icon: CarFront, title: "Procedural dyno bay", text: "Original 3D vehicle bodies scaled to published dimensions, sitting on a modelled 4-axle roller set with studio cameras and live wheel motion.", tag: "3D" },
               { icon: Database, title: "Sourced vehicle register", text: "Eleven real models across NA, turbo, diesel, V6, flat-six, V8 and 4x4 configurations, each with verified and estimated fields separated.", tag: "data" },
               { icon: ShieldCheck, title: "Honest instrumentation", text: "No decorative gauges. Every readout is classified as simulated state, roller-derived or estimated, with methodology available in the data log.", tag: "trust" },
@@ -135,10 +135,10 @@ export function About({ onNavigate, onOpenControls }: { onNavigate: (view: AppVi
                   <p className="font-display text-[15px] font-semibold text-fg">Asif</p>
                   <p className="text-[10.5px] text-[#8db3a2]">Creator - RealShift</p>
                   <p className="mt-2 max-w-2xl text-[11px] leading-relaxed text-mut">
-                    Asif is the sole creator and developer of RealShift. He designed and implemented the vehicle database, drivetrain and clutch simulation, the fixed-step roller model, the Web Audio engine synthesiser, the Three.js dyno bay and the complete interface. This is an independent browser-based simulation project — no studio, no generated automobile claims, and no borrowed commercial assets.
+                    Asif is the sole creator and developer of RealShift. He designed and implemented the vehicle database, drivetrain and clutch simulation, the fixed-step roller model, the original Web Audio engine, the Three.js dyno bay and the complete interface. This is an independent browser-based simulation project — no studio, no generated automobile claims, and no borrowed commercial assets.
                   </p>
                   <div className="mt-2 flex flex-wrap gap-1.5">
-                    {["Simulation design", "Frontend engineering", "Audio synthesis", "3D & interface"].map((tag) => <Chip key={tag}>{tag}</Chip>)}
+                    {["Simulation design", "Frontend engineering", "Audio engineering", "3D & interface"].map((tag) => <Chip key={tag}>{tag}</Chip>)}
                   </div>
                 </div>
               </div>
@@ -193,9 +193,9 @@ export function About({ onNavigate, onOpenControls }: { onNavigate: (view: AppVi
             </Panel>
             <Panel className="p-4">
               <p className="label-xs mb-1">Asset & audio policy</p>
-              <h3 className="text-sm font-semibold text-fg">No copied game assets or recordings</h3>
+              <h3 className="text-sm font-semibold text-fg">No copied game assets</h3>
               <p className="mt-1.5 text-[10px] leading-relaxed text-mut">
-                Vehicles are original procedural geometry. Engine audio is synthesised in the browser with the Web Audio API and is not a recording of the actual vehicle. Interface icons use Lucide and Simple Icons, 3D uses Three.js, and typefaces are Space Grotesk, Inter and JetBrains Mono under the SIL Open Font License.
+                Vehicles are original procedural geometry. Engine audio uses licensed recordings as engine-family approximations, with some synthetic effects. See the audio manifest for source credits and licences. Interface icons use Lucide and Simple Icons, 3D uses Three.js, and typefaces are Space Grotesk, Inter and JetBrains Mono under the SIL Open Font License.
               </p>
             </Panel>
           </div>
@@ -221,7 +221,7 @@ export function About({ onNavigate, onOpenControls }: { onNavigate: (view: AppVi
                 ["Storage", "Local browser persistence"],
                 ["Vehicles", `${VEHICLES.length} production models`],
                 ["Rendering", "Three.js + WebGL"],
-                ["Audio", "Web Audio API · synthesis"],
+                ["Audio", "Web Audio API · recorded loops"],
               ].map(([label, value]) => (
                 <div key={label} className="flex items-center justify-between gap-3 px-4 py-2">
                   <span className="label-xs">{label}</span>
@@ -255,7 +255,7 @@ export function About({ onNavigate, onOpenControls }: { onNavigate: (view: AppVi
               ))}
             </div>
             <div className="border-t border-line-soft px-4 py-2.5 text-[9px] leading-relaxed text-mut-2">
-              No manufacturer logos, CAD models, audio recordings or game assets are redistributed. All vehicle representations are original procedural work.
+              No manufacturer logos, CAD models or game-ripped assets are redistributed. Licensed engine recordings are credited in the audio manifest. All vehicle representations are original procedural work.
             </div>
           </Panel>
 
