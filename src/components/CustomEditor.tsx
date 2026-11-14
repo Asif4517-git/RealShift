@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { DEFAULT_CUSTOM, validateCustom, type CustomBuild, type CustomSpec } from '../lib/customVehicle';
+import { DEFAULT_CUSTOM, validateCustom, estimateTopSpeed, suggestRatios, type CustomBuild, type CustomSpec } from '../lib/customVehicle';
 import { useStore } from '../lib/store';
 import { Button, Panel } from './ui';
 
@@ -10,6 +10,7 @@ export function CustomEditor() {
   const [spec, setSpec] = useState<CustomSpec>(copyDefault);
   const [ratioText, setRatioText] = useState(DEFAULT_CUSTOM.ratios.join(', '));
   const [message, setMessage] = useState('');
+  const [gearCount, setGearCount] = useState(6);
   const patch = (p: Partial<CustomSpec>) => setSpec(v => ({ ...v, ...p }));
   const edit = (b: CustomBuild) => { setId(b.id); setSpec({ ...b.spec, ratios: [...b.spec.ratios] }); setRatioText(b.spec.ratios.join(', ')); setMessage(''); };
   const reset = () => { setId(null); setSpec(copyDefault()); setRatioText(DEFAULT_CUSTOM.ratios.join(', ')); setMessage(''); };
@@ -35,6 +36,11 @@ export function CustomEditor() {
       <label className="text-xs text-mut">Tyre (determines radius)<input className="mt-1 w-full rounded border border-line bg-[#0c110d] p-2 text-fg" value={spec.tyre} onChange={e => patch({tyre:e.target.value})} /></label>{numeric('Top-speed target (km/h)', 'targetTopSpeed')}
       <label className="text-xs text-mut">Clutch mode (app setting)<select className="mt-1 w-full rounded border border-line bg-[#0c110d] p-2 text-fg" value={settings.clutchMode} onChange={e => updateSettings({clutchMode:e.target.value as typeof settings.clutchMode})}><option value="manual">Manual</option><option value="assisted">Assisted</option><option value="auto">Automatic</option></select></label>
     </div>
+    <div className="flex flex-wrap items-end gap-2">
+      <label className="text-xs text-mut">Forward gears for automatic ratios<input type="number" min="1" max="8" value={gearCount} onChange={e => setGearCount(e.target.valueAsNumber)} className="ml-2 w-16 rounded border border-line bg-[#0c110d] p-2 text-fg" /></label>
+      <Button variant="outline" size="sm" onClick={() => { const ratios = suggestRatios(spec, gearCount); if (!ratios.length) { setMessage('Cannot generate ratios for these tyre, gearing or target values.'); return; } setRatioText(ratios.join(', ')); setMessage('Ratios generated from target speed at redline. Check the estimated achievable speed before saving.'); }}>Generate ratios</Button>
+    </div>
+    {(() => { const candidate = {...spec, ratios: ratioText.split(',').map(x => x.trim() === '' ? NaN : Number(x))}; const estimate = estimateTopSpeed(candidate); return estimate > 0 ? <p className="text-xs text-mut">Estimated flat-road maximum: <strong className="text-fg">{estimate.toFixed(1)} km/h</strong>. Computed from torque, gearing, tyre radius, mass, losses and the simulator’s approximate aerodynamic resistance. No dyno load, slope or electronic limiter; not a measured result.</p> : null; })()}
     {message && <p role="status" className="text-xs text-accent">{message}</p>}
     <div className="flex gap-2"><Button variant="primary" size="sm" onClick={save}>Save {id ? 'changes' : 'build'}</Button><Button variant="outline" size="sm" onClick={() => { if (window.confirm('Restore editor defaults? Saved builds are not affected.')) reset(); }}>Restore editor defaults</Button></div>
   </Panel>;

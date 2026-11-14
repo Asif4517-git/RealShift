@@ -47,7 +47,7 @@ export function customVehicle(build: CustomBuild): Vehicle {
   const peakRpm = Math.round(s.redline * 0.9);
   const powerTorque = s.powerHp * 745.7 / (peakRpm * Math.PI / 30);
   const torquePeakRpm = Math.round(s.idleRpm + (peakRpm - s.idleRpm) * (s.turbo ? 0.4 : 0.65));
-  let character: SoundCharacter = s.fuel === 'Diesel' ? 'turbo-diesel-i4' : s.layout === 'Flat' && s.cylinders === 6 ? 'turbo-flat6' : s.layout === 'V' && s.cylinders >= 8 ? 'na-petrol-v8' : s.layout === 'V' && s.cylinders === 6 ? 'na-petrol-v6' : s.layout === 'Inline' && s.cylinders === 6 ? 'na-petrol-i6' : s.turbo ? 'turbo-petrol-i4' : 'na-petrol-i4';
+  let character: SoundCharacter = s.fuel === 'Diesel' ? 'turbo-diesel-i4' : s.cylinders === 3 ? 'turbo-petrol-i3' : s.layout === 'Flat' && s.cylinders === 6 ? 'turbo-flat6' : s.layout === 'V' && s.cylinders >= 8 ? 'na-petrol-v8' : s.layout === 'V' && s.cylinders === 6 ? 'na-petrol-v6' : s.layout === 'Inline' && s.cylinders === 6 ? (s.turbo ? 'turbo-petrol-i6' : 'na-petrol-i6') : s.turbo ? 'turbo-petrol-i4' : 'na-petrol-i4';
   return {
     ...base, id: build.id, make: 'Custom', model: s.name.trim(), variant: 'User build', year: new Date().getFullYear(), generation: 'Estimated configuration',
     tags: ['Custom', s.turbo ? 'Turbocharged' : 'Naturally aspirated'],
@@ -63,4 +63,48 @@ export function customVehicle(build: CustomBuild): Vehicle {
     sound: { ...base.sound, character, label: 'Approximate engine-family audio', description: 'Uses the nearest available recorded family, not a recording of this build.', turbo:s.turbo, diesel:s.fuel === 'Diesel', firingNote:`${s.cylinders} cylinders`, layers:['Approximate recorded engine'] },
     verified: [], estimated: ['All custom specifications, curve shape, losses and acoustic profile'], sources: [], notes: 'User-defined simulation, not a verified real vehicle. Top-speed target does not override physics.',
   };
+}
+
+/** Flat-road steady-state estimate using the same rolling and aero terms as the simulator.
+ * It assumes full boost, no dyno load, no wind/grade and an engaged, non-slipping clutch. */
+export function estimateTopSpeed(s: CustomSpec): number {
+  if (validateCustom(s).length) return 0;
+  const v = customVehicle({ id: 'custom-estimate', spec: s });
+  const m = /^(\d{3})\/(\d{2})R(\d{2})$/i.exec(s.tyre.trim())!;
+  const radius = +m[3] * 0.0254 / 2 + (+m[1] / 1000) * (+m[2] / 100);
+  const torqueAt = (rpm: number) => {
+    const curve = v.engine.torqueCurve;
+    if (rpm <= curve[0].rpm) return curve[0].nm;
+    for (let i = 1; i < curve.length; i++) if (rpm <= curve[i].rpm) {
+      const a=curve[i-1], b=curve[i], t=(rpm-a.rpm)/(b.rpm-a.rpm), smooth=t*t*(3-2*t);
+      return a.nm+(b.nm-a.nm)*smooth;
+    }
+    return curve[curve.length-1].nm;
+  };
+  let best = 0;
+  for (let kph = 1; kph <= 500; kph += 0.5) {
+    const speed = kph / 3.6;
+    const resistance = s.weightKg*9.81*0.014 + 0.5*1.2*2.2*(v.chassis.widthMm/1000)*speed*speed;
+    const canMaintain = s.ratios.some(gear => {
+      const overall=gear*s.finalDrive, rpm=speed/radius*overall*60/(2*Math.PI);
+      if (rpm < s.idleRpm || rpm > s.redline) return false;
+      const friction=v.engine.frictionTorque*(0.55+0.7*rpm/s.redline)+2;
+      return Math.max(0, torqueAt(rpm)-friction)*overall*v.gearbox.efficiency/radius >= resistance;
+    });
+    if (canMaintain) best = kph;
+  }
+  return best;
+}
+
+/** Geometric ratios with the requested target at redline in top gear. */
+export function suggestRatios(s: CustomSpec, count: number): number[] {
+  if (!Number.isInteger(count) || count < 1 || count > 8 || !Number.isFinite(s.targetTopSpeed) || s.targetTopSpeed <= 0 || !Number.isFinite(s.finalDrive) || s.finalDrive <= 0) return [];
+  const m = /^(\d{3})\/(\d{2})R(\d{2})$/i.exec(s.tyre.trim());
+  if (!m) return [];
+  const radius=+m[3]*0.0254/2+(+m[1]/1000)*(+m[2]/100);
+  const top=s.redline*(2*Math.PI/60)*radius/(s.targetTopSpeed/3.6*s.finalDrive);
+  if (!Number.isFinite(top) || top < 0.2 || top >= 4) return [];
+  if (count === 1) return [Number(top.toFixed(3))];
+  const first=Math.max(3.5,top*1.1);
+  return Array.from({length:count},(_,i)=>Number((first*Math.pow(top/first,i/(count-1))).toFixed(3)));
 }

@@ -1,7 +1,10 @@
 import { strict as assert } from 'node:assert';
-import { DEFAULT_CUSTOM, customVehicle, validateCustom } from '../src/lib/customVehicle';
+import { DEFAULT_CUSTOM, customVehicle, validateCustom, estimateTopSpeed, suggestRatios } from '../src/lib/customVehicle';
 import { DynoSimulation } from '../src/lib/physics';
 assert.deepEqual(validateCustom(DEFAULT_CUSTOM), []);
+assert(estimateTopSpeed(DEFAULT_CUSTOM) > 50);
+assert.equal(suggestRatios(DEFAULT_CUSTOM, 6).length, 6);
+assert.deepEqual(suggestRatios(DEFAULT_CUSTOM, 0), []);
 assert(validateCustom({ ...DEFAULT_CUSTOM, ratios: [1,2] }).length);
 assert(validateCustom({ ...DEFAULT_CUSTOM, tyre: 'bad' }).length);
 assert(validateCustom({ ...DEFAULT_CUSTOM, powerHp: 1500, torqueNm: 30 }).length);
