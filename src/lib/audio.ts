@@ -438,6 +438,7 @@ export class EngineAudio {
   private exhaustFactor = 1;
   private intakeFactor = 1;
   private modelsReady = false;
+  private fallback = false;
   private rendering = false;
   private decoded = new Map<string, AudioBuffer>();
   private audioPeak = 0;
@@ -455,6 +456,10 @@ export class EngineAudio {
 
   get ready() {
     return this.modelsReady;
+  }
+
+  get usingFallback() {
+    return this.fallback;
   }
 
   async ensureStarted() {
@@ -553,6 +558,7 @@ export class EngineAudio {
             ? [[v6Idle, 651], [v6Rev, 4111]]
             : [[i4Idle, 877], [i4Rev, 2274], [vehicle.engine.code === "F20C" ? s2000High : i4RevB, vehicle.engine.code === "F20C" ? 7317 : 2529]];
     let buffers: AudioBuffer[];
+    let fallback = false;
     try {
       buffers = await Promise.all(clips.map(async ([url]) => {
         const cached = this.decoded.get(url);
@@ -565,6 +571,7 @@ export class EngineAudio {
       }));
     } catch (error) {
       if (this.ctx !== context || vehicle !== this.vehicle) { this.rendering = false; if (this.ctx === context) void this.renderModels(); return; }
+      fallback = true;
       console.warn("Recorded engine audio unavailable; using synthetic fallback", error);
       const rate = this.ctx.sampleRate;
       buffers = [voice.idleRpm, voice.redline * 0.46, voice.redline * 0.85]
@@ -590,6 +597,7 @@ export class EngineAudio {
       this.bandGains.push(gain);
     }
     this.bandAnchors = clips.map((clip) => clip[1]);
+    this.fallback = fallback;
     this.modelsReady = true;
     this.rendering = false;
     this.setVolumes(this.volumes);
@@ -883,7 +891,7 @@ export class EngineAudio {
           vehicle: self.vehicle.id,
           character: self.vehicle.sound.character,
           ctx: self.ctx?.state,
-          model: "recorded-engine-loops",
+          model: self.fallback ? "synthetic-fallback" : "recorded-engine-loops",
         };
       },
       profile() {

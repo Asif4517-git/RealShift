@@ -194,3 +194,24 @@ browser, listening or real-world validation.
 - Simulated power figures are calculated estimates, not dyno-cell measurements.
 - Tyre slip, suspension travel and full ECU/thermal models are simplified.
 - Runs and settings persist per browser profile only.
+
+### Additional V3 checks
+
+`npm run test:custom` checks custom configuration validation and exercises its
+vehicle in all three clutch modes. For an interaction smoke test, start the Vite
+server and run `BASE_URL=http://127.0.0.1:5173 CHROMIUM_PATH=/path/to/chromium npm run test:browser`.
+The browser needs its system libraries and WebGL support. The smoke test clears
+local storage **in its isolated Playwright browser context**, creates a custom
+build, starts the engine, records a pull and checks reset preservation and audio
+sample decoding. It does not replace human listening or validate every vehicle.
+On a constrained Debian sandbox where apt cannot reach its package mirrors,
+the `@sparticuz/chromium` npm package supplies an `al2023.tar.br` containing the
+missing NSS/NSPR libraries; extract it and point `LD_LIBRARY_PATH` at its `lib`
+directory before launching its Chromium binary.
+
+Custom builds are user estimates. The displayed road-speed estimate assumes
+steady full load, flat road, no dyno resistance and the simulation's simplified
+aerodynamics; it is neither a guarantee nor a speed cap. Audio uses the nearest
+available recording family and many load/transition states remain unrecorded.
+Only two garage photographs are currently provided; they show representative
+trims and their licences and attribution are in `src/assets/cars/MANIFEST.md`.

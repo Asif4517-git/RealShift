@@ -571,7 +571,7 @@ export function DynoBay({ onNavigate, onOpenControls, onOpenSettings, onOpenAudi
                 </IconButton>
               </div>
               <p className="mt-2 font-mono text-[9px] uppercase leading-relaxed tracking-[0.06em] text-mut-2">
-                {dyno.audioArmed ? (dyno.audioReady ? "Recorded engine loops · RPM blend · camera mix" : "Loading engine recordings…") : "Audio starts on first input (browser gesture)"}
+                {dyno.audioArmed ? (dyno.audioReady ? (dyno.audioFallback ? "Synthetic fallback · recording decode failed" : "Recorded engine loops · RPM blend · camera mix") : "Loading engine recordings…") : "Audio starts on first input (browser gesture)"}
               </p>
               <p className="mt-1 text-[10.5px] leading-relaxed text-mut-2">Recorded engine-family approximations; not the exact vehicle. Some RPM and load conditions use pitch shifting or synthetic effects. See the audio manifest for credits.</p>
             </div>

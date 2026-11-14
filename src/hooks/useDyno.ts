@@ -26,6 +26,7 @@ export function useDyno(inputEnabled: boolean) {
   const [notice, setNotice] = useState<Notice | null>(null);
   const [audioArmed, setAudioArmed] = useState(false);
   const [audioReady, setAudioReady] = useState(false);
+  const [audioFallback, setAudioFallback] = useState(false);
 
   if (!simRef.current) simRef.current = new DynoSimulation(vehicle);
   if (!audioRef.current) audioRef.current = new EngineAudio(vehicle);
@@ -49,6 +50,7 @@ export function useDyno(inputEnabled: boolean) {
     audio.setQuality(settings.audioQuality);
     setAudioArmed(true);
     setAudioReady(audio.ready);
+    setAudioFallback(audio.usingFallback);
   }, [audio, settings.audio, settings.audioQuality]);
 
   const startEngine = useCallback(async () => {
@@ -116,6 +118,8 @@ export function useDyno(inputEnabled: boolean) {
   }, [sim, settings.dynoLoad]);
   useEffect(() => {
     audio.setVehicle(vehicle);
+    audioReadyRef.current = false;
+    setAudioReady(false);
     sim.setVehicle(vehicle);
     setSnapshot(sim.snapshot());
   }, [vehicle, audio, sim]);
@@ -172,6 +176,7 @@ export function useDyno(inputEnabled: boolean) {
       if (!audioReadyRef.current && audio.ready) {
         audioReadyRef.current = true;
         setAudioReady(true);
+        setAudioFallback(audio.usingFallback);
       }
       if (now - lastUi > 55) {
         lastUi = now;
@@ -222,6 +227,7 @@ export function useDyno(inputEnabled: boolean) {
     vehicle,
     audioArmed,
     audioReady,
+    audioFallback,
     setAudioCamera,
     notice,
     held,

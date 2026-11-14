@@ -8,7 +8,9 @@
     "build": "vite build",
     "preview": "vite preview",
     "test:physics": "esbuild tests/physics.test.ts --bundle --platform=node --format=esm --outfile=/tmp/realshift-physics-test.mjs && node /tmp/realshift-physics-test.mjs",
-    "test:custom": "esbuild tests/custom.test.ts --bundle --platform=node --format=esm --outfile=/tmp/realshift-custom-test.mjs && node /tmp/realshift-custom-test.mjs"
+    "test:custom": "esbuild tests/custom.test.ts --bundle --platform=node --format=esm --outfile=/tmp/realshift-custom-test.mjs && node /tmp/realshift-custom-test.mjs",
+    "test:browser": "node tests/browser-smoke.mjs",
+    "test:audio-fallback": "node tests/audio-fallback.mjs"
   },
   "dependencies": {
     "clsx": "2.1.1",
@@ -25,6 +27,7 @@
     "@types/react-dom": "19.2.3",
     "@types/three": "^0.187.0",
     "@vitejs/plugin-react": "5.1.1",
+    "playwright-core": "^1.65.1",
     "tailwindcss": "4.1.17",
     "typescript": "5.9.3",
     "vite": "7.3.7",
