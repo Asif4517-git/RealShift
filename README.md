@@ -68,7 +68,8 @@ cluster, the dyno chart and the audio engine — no gauge uses independent value
 ```
 α_engine = (T_curve(rpm)·throttle·k_boost − T_friction − T_clutch) / J_flywheel
 α_roller = (T_clutch·i_gear·i_final·η − ΣT_load) / (J_dyno + m·r²)
-rpm      = ω_wheel · i_gear · i_final · 60/(2π)
+rpm_engine = ω_engine · 60/(2π)
+rpm_input  = ω_wheel · i_gear · i_final · 60/(2π)  [clutch slip allows a difference]
 P_wheel  = T_wheel · ω_wheel / 745.7              [hp]
 P_crank  = P_wheel / η_drivetrain                 [estimated]
 v        = ω_wheel · r · 3.6                      [km/h]
@@ -125,6 +126,12 @@ with links.
 | Ford Mustang GT 5.0 S550 (2017) | ford.com/cars/mustang · en.wikipedia.org/wiki/Ford_Mustang_(S550) |
 | Mahindra Thar LX 4×4 2.2 (2020) | mahindra.com/auto/muvs-suvs/thar · en.wikipedia.org/wiki/Mahindra_Thar |
 | Toyota Hilux Invincible 2.8 (2018) | toyota.co.uk/new-cars/hilux · en.wikipedia.org/wiki/Toyota_Hilux |
+| Honda Civic Type R FK8 (2017) | [Honda US specifications](https://hondanews.com/en-US/honda-automobiles/releases/release-dda03e0c69c6476cbf2e0c544555aeef-2017-civic-type-r-specifications-features) |
+| BMW M3 G80 6MT (2021) | [BMW M3 specification discussion](https://www.i4talk.com/threads/specs-the-new-2021-bmw-m3-sedan-and-m4-coupe.73/) |
+| Toyota GR Supra A91-MT (2023) | [Toyota brochure](https://www.toyota.com/content/dam/toyota/brochures/pdf/2023/grsupra_ebrochure.pdf); gear ratios are provisional |
+| Mazda MX-5 ND2 (2020) | [Mazda specification](https://www.mazda-qatar.com/vehicles/mazda-mx-5/grades/default.php) |
+| Hyundai i20 N Line 6MT (2023) | [Autocar India](https://www.autocarindia.com/car-news/hyundai-i20-n-line-facelift-launched-at-rs-999-lakh-429372); gear ratios are provisional |
+| Toyota Fortuner 2.8 diesel 4x2 MT (2021) | [Autocar India](https://www.autocarindia.com/cars/toyota/fortuner/2.8l-diesel-4x2-mt); gear ratios are provisional |
 
 Bodies are **original procedural geometry** built to published length, width, height and
 wheelbase. No manufacturer CAD, logos, textures or game-ripped models are redistributed.

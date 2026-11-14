@@ -14,9 +14,11 @@ await page.addInitScript(() => {
   };
 });
 try {
+  console.log('Loading app');
   await page.goto(process.env.BASE_URL || 'http://127.0.0.1:5173/', { waitUntil: 'domcontentloaded' });
   await page.evaluate(() => { localStorage.clear(); localStorage.setItem('realshift.settings.v1', '{"obsolete":true}'); localStorage.setItem('realshift.settings.v2', JSON.stringify({graphics:'performance',audio:{master:0.2}})); localStorage.setItem('realshift.bindings.v1', JSON.stringify({ignition:'KeyO'})); });
   await page.reload({ waitUntil: 'domcontentloaded' });
+  console.log('Creating custom build');
   await page.getByRole('button', { name: 'Garage', exact: true }).first().click();
   await page.getByLabel('Build name').fill('Browser build');
   await page.getByRole('button', { name: 'Save build', exact: true }).click();
@@ -27,6 +29,7 @@ try {
   await page.getByRole('button', { name: 'Edit / rename' }).click();
   await page.getByLabel('Build name').fill('Edited browser build');
   await page.getByRole('button', { name: 'Save changes' }).click();
+  console.log('Starting dyno');
   await page.getByRole('button', { name: 'Enter dyno bay' }).click();
   await page.getByRole('button', { name: 'Start', exact: true }).first().click();
   await page.waitForFunction(() => window.__decoded > 0, null, { timeout: 30000 });
@@ -35,12 +38,14 @@ try {
   await page.keyboard.down('w'); await page.waitForTimeout(1000); await page.keyboard.up('w');
   await page.waitForTimeout(2500);
   await page.keyboard.press('ArrowUp'); await page.waitForTimeout(600);
+  console.log('Recording pull');
   await page.getByRole('button', { name: 'Arm dyno pull' }).first().click();
   await page.getByRole('button', { name: 'End & save pull' }).waitFor();
   await page.keyboard.down('w');
   await page.waitForFunction(() => /(?:[3-9]|[1-9][0-9]+) samples recording/i.test(document.body.innerText), null, { timeout: 90000 });
   await page.keyboard.up('w');
   await page.getByRole('button', { name: 'End & save pull' }).click();
+  console.log('Checking reset and persistence');
   await page.getByRole('button', { name: 'Audio & settings' }).first().click();
   await page.getByRole('button', { name: 'Reset all settings' }).click();
   await page.getByRole('button', { name: 'Confirm reset' }).click();

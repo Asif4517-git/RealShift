@@ -44,7 +44,7 @@ try {
   await page.waitForFunction(()=>JSON.parse(localStorage.getItem('realshift.custom.v1')).length===1);
   page.once('dialog',d=>d.accept()); await page.getByRole('button',{name:'Restore editor defaults'}).click();
   assert.equal(await page.getByLabel('Build name').inputValue(),'My build');
-  const dims=await page.evaluate(()=>({width:document.documentElement.clientWidth,scroll:document.documentElement.scrollWidth,photos:[...document.querySelectorAll('img')].filter(x=>x.alt.includes('representative trim')).map(x=>({alt:x.alt,ok:x.complete&&x.naturalWidth>0}))}));
-  assert.equal(dims.scroll,dims.width,'mobile document must not overflow horizontally'); assert(dims.photos.length>=7 && dims.photos.every(p=>p.ok));
+  const dims=await page.evaluate(()=>({width:document.documentElement.clientWidth,scroll:document.documentElement.scrollWidth,photos:[...document.querySelectorAll('img')].filter(x=>x.alt.includes('representative')).map(x=>({alt:x.alt,ok:x.complete&&x.naturalWidth>0}))}));
+  assert.equal(dims.scroll,dims.width,'mobile document must not overflow horizontally'); assert(dims.photos.length===12 && dims.photos.every(p=>p.ok));
   assert.deepEqual(errors,[]); console.log(`Mobile editor create, persistence, duplicate, cancel/delete, defaults and ${dims.photos.length} photo loads passed.`);
 } finally { await browser.close(); }

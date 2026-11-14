@@ -12,6 +12,7 @@ try {
   await page.getByLabel('Build name').fill('Unsaved build');
   await page.getByRole('button', {name:'Save build', exact:true}).click();
   assert.equal(await page.getByRole('alert').count(), 1);
+  await page.getByText(/Build selected for this session/).waitFor();
   assert.deepEqual(errors, []);
   const corrupt = await browser.newPage();
   await corrupt.addInitScript(() => {
