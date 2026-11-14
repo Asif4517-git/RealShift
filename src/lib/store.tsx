@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { DEFAULT_AUDIO, type AudioQuality, type AudioVolumes } from "../lib/audio";
 import type { ClutchMode, DynoRun } from "../lib/physics";
+import type { CameraPreset } from "../three/CarScene";
 import type { ClusterTheme } from "../components/clusters";
 import { DEFAULT_VEHICLE_ID, getVehicle, VEHICLES } from "../lib/vehicles";
 
@@ -57,6 +58,7 @@ export interface Settings {
   autoPullRecord: boolean;
   reducedMotion: boolean;
   cluster: ClusterTheme;
+  camera: CameraPreset;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -70,6 +72,7 @@ export const DEFAULT_SETTINGS: Settings = {
   autoPullRecord: true,
   reducedMotion: false,
   cluster: "sport",
+  camera: "cinematic",
 };
 
 interface StoreValue {
@@ -83,6 +86,7 @@ interface StoreValue {
   setBinding: (action: BindingAction, code: string) => void;
   resetBinding: (action: BindingAction) => void;
   resetBindings: () => void;
+  resetAllSettings: () => void;
   selectVehicle: (id: string) => void;
   addRun: (run: DynoRun) => void;
   deleteRun: (id: string) => void;
@@ -154,6 +158,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setBindings((prev) => ({ ...prev, [action]: DEFAULT_BINDINGS[action] }));
   }, []);
   const resetBindings = useCallback(() => setBindings({ ...DEFAULT_BINDINGS }), []);
+  const resetAllSettings = useCallback(() => {
+    // Remove legacy settings as well, without touching runs or selected vehicle.
+    try { localStorage.removeItem("realshift.settings.v1"); } catch { /* storage unavailable */ }
+    setSettings({ ...DEFAULT_SETTINGS, audio: { ...DEFAULT_AUDIO } });
+    setBindings({ ...DEFAULT_BINDINGS });
+  }, []);
   const selectVehicle = useCallback((id: string) => {
     if (VEHICLES.some((v) => v.id === id)) setVehicleId(id);
   }, []);
@@ -177,12 +187,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       setBinding,
       resetBinding,
       resetBindings,
+      resetAllSettings,
       selectVehicle,
       addRun,
       deleteRun,
       clearRuns,
     }),
-    [settings, bindings, vehicleId, runs, updateSettings, updateAudio, setBinding, resetBinding, resetBindings, selectVehicle, addRun, deleteRun, clearRuns],
+    [settings, bindings, vehicleId, runs, updateSettings, updateAudio, setBinding, resetBinding, resetBindings, resetAllSettings, selectVehicle, addRun, deleteRun, clearRuns],
   );
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;

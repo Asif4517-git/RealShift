@@ -70,6 +70,8 @@ export interface SimSnapshot {
   clutch: number;
   clutchEngaged: boolean;
   throttle: number;
+  effectiveThrottle: number;
+  clutchTorqueNm: number;
   brake: number;
   steer: number;
   boostBar: number;
@@ -129,6 +131,8 @@ export class DynoSimulation {
   clutchActual = 0; // smoothed actuator
   throttle = 0;
   throttleTarget = 0;
+  effectiveThrottle = 0;
+  clutchTorque = 0;
   brake = 0;
   steer = 0;
   autoClutchTimer = 0;
@@ -192,6 +196,8 @@ export class DynoSimulation {
     this.clutchActual = 0;
     this.throttle = 0;
     this.throttleTarget = 0;
+    this.effectiveThrottle = 0;
+    this.clutchTorque = 0;
     this.brake = 0;
     this.boost = 0;
     this.fuelCutTimer = 0;
@@ -412,11 +418,17 @@ export class DynoSimulation {
       }
     }
 
+    // The actuator represents torque interruption or a rev-match blip during
+    // assisted shifts. Expose this same state to the audio mixer.
+    this.effectiveThrottle = this.engineOn
+      ? (this.autoClutchTimer > 0 ? clamp((this.shiftRevMatchRpm - this.rpm) / 900, 0, 0.65) : this.throttle)
+      : 0;
+
     // Air charge
     const turbo = !!eng.boostBar;
     let boostTarget = 0;
     if (turbo && this.engineOn) {
-      boostTarget = (eng.boostBar ?? 0) * smooth((this.rpm - 900) / 1900) * (0.35 + this.throttle * 0.65);
+      boostTarget = (eng.boostBar ?? 0) * smooth((this.rpm - 900) / 1900) * this.effectiveThrottle;
     }
     const spoolTau = eng.aspiration === "Twin-Turbo" ? 0.18 : eng.fuel === "Diesel" ? 0.34 : 0.26;
     this.boost += (boostTarget - this.boost) * Math.min(1, dt / spoolTau);
@@ -438,10 +450,8 @@ export class DynoSimulation {
         ? 0.58 + 0.42 * clamp(this.boost / Math.max(eng.boostBar ?? 1, 0.1), 0, 1.1)
         : 1;
       // Assisted shifts interrupt drive torque while the clutch is open.
-      const effectiveThrottle = this.autoClutchTimer > 0
-        ? clamp((this.shiftRevMatchRpm - this.rpm) / 900, 0, 0.65) : this.throttle;
-      grossTorque = this.torqueAt(this.rpm) * effectiveThrottle * boostFactor;
-      if (this.throttle < 0.07) {
+      grossTorque = this.torqueAt(this.rpm) * this.effectiveThrottle * boostFactor;
+      if (this.effectiveThrottle < 0.07) {
         const idleWindow = this.rpm < eng.idleRpm + 420;
         const error = eng.idleRpm - this.rpm;
         this.idleIntegral = clamp(this.idleIntegral + error * dt * 2.4, -5, 26);
@@ -501,6 +511,7 @@ export class DynoSimulation {
     } else {
       this.clutchHeat = Math.max(0, this.clutchHeat - dt * 0.55);
     }
+    this.clutchTorque = clutchTorque;
     engineOmega = Math.max(0, engineOmega + (engineNet - clutchTorque) / eng.flywheelInertia * dt);
     this.rpm = clamp(engineOmega * 60 / (2 * Math.PI), 0, eng.limiter + 220);
     const drivenTorque = clutchTorque * ratio * gearbox.efficiency;
@@ -609,6 +620,8 @@ export class DynoSimulation {
       clutch: this.clutchActual,
       clutchEngaged: this.clutchActual < 0.35,
       throttle: this.throttle,
+      effectiveThrottle: this.effectiveThrottle,
+      clutchTorqueNm: this.clutchTorque,
       brake: this.brake,
       steer: this.steer,
       boostBar: this.boost,

@@ -1039,6 +1039,50 @@ export const VEHICLES: Vehicle[] = [
     ],
     notes: "European Invincible specification, 2.8 diesel manual. Some variants use a 6-speed automatic.",
   },
+
+  {
+    id: "civic-type-r-fk8-2017",
+    make: "Honda", model: "Civic Type R", variant: "Touring", year: 2017,
+    generation: "FK8 · US specification", bodyStyle: "Hatchback", country: "Japan",
+    tags: ["Turbocharged", "Hot hatch", "FWD"],
+    paint: [
+      { name: "Championship White", hex: "#e9e9e1" },
+      { name: "Rallye Red", hex: "#ba202a" },
+      { name: "Aegean Blue", hex: "#23568f" },
+    ],
+    engine: {
+      code: "K20C1", displacementCc: 1996, cylinders: 4, layout: "Inline-4",
+      induction: "Single-scroll turbocharged, direct injection", aspiration: "Turbo",
+      powerHp: 306, powerRpm: 6500, torqueNm: 400, torqueRpm: "2,500–4,500 rpm",
+      idleRpm: 800, redline: 7000, limiter: 7200, compression: "9.8:1", boostBar: 1.57,
+      fuel: "Petrol", flywheelInertia: 0.19, frictionTorque: 26, crankingRpm: 230,
+      torqueCurve: [
+        { rpm: 800, nm: 130 }, { rpm: 1500, nm: 235 }, { rpm: 2500, nm: 400 },
+        { rpm: 3500, nm: 400 }, { rpm: 4500, nm: 400 }, { rpm: 5500, nm: 360 },
+        { rpm: 6500, nm: 335 }, { rpm: 7200, nm: 280 },
+      ],
+    },
+    gearbox: {
+      type: "6-speed manual", speeds: 6, ratios: [3.625, 2.115, 1.529, 1.125, 0.911, 0.735],
+      reverse: 3.758, finalDrive: 4.111, drivetrain: "FWD", efficiency: 0.9, clutchCapacityNm: 520,
+    },
+    chassis: {
+      weightKg: 1414, lengthMm: 4557, widthMm: 1877, heightMm: 1435, wheelbaseMm: 2700,
+      tyre: "245/30R20", wheelDiameterIn: 20,
+    },
+    dyno: { peakPowerHp: 306, measuredWheelHp: 275, driveLoss: 0.1, note: "Wheel output is an estimated drivetrain loss, not a measured dyno run." },
+    sound: {
+      character: "turbo-petrol-i4", label: "Turbo inline-four approximation",
+      description: "A generic recorded four-cylinder profile, not a recording of the K20C1.",
+      firingNote: "Four-cylinder, two firing events per revolution",
+      layers: ["Recorded inline-four", "Intake", "Turbo"], turbo: true, diesel: false,
+      resonanceHz: 100, rasp: 0.48, revHappiness: 0.94,
+    },
+    verified: ["1996 cc K20C1", "306 hp @ 6500 rpm", "295 lb-ft @ 2500–4500 rpm", "7000 rpm redline", "Six-speed ratios and final drive", "3117 lb curb weight", "245/30ZR20 tyres"],
+    estimated: ["Torque curve between published points", "Idle and limiter rpm", "Flywheel inertia", "Friction torque", "Clutch capacity", "Drivetrain efficiency and wheel horsepower"],
+    sources: [{ label: "Honda News — 2017 Civic Type R specifications", url: "https://hondanews.com/en-US/honda-automobiles/releases/release-dda03e0c69c6476cbf2e0c544555aeef-2017-civic-type-r-specifications-features" }],
+    notes: "2017 US-market Touring, six-speed manual. Turbo boost is the published 22.8 psi, rounded to bar. Simulation parameters and wheel power are estimates.",
+  },
 ];
 
 export const getVehicle = (id: string) =>

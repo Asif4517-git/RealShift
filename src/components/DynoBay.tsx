@@ -47,11 +47,13 @@ export function DynoBay({ onNavigate, onOpenControls, onOpenSettings, onOpenAudi
   const { settings, updateSettings, updateAudio, runs, bindings } = useStore();
   const dyno = useDyno(!inputBlocked);
   const { snapshot: snap, vehicle, held } = dyno;
-  const [camera, setCamera] = useState<CameraPreset>("cinematic");
+  const camera = settings.camera;
   const [cameraNonce, setCameraNonce] = useState(0);
   const [showTorque, setShowTorque] = useState(true);
   const [flash, setFlash] = useState<string | null>(null);
   const units = settings.units;
+
+  useEffect(() => { dyno.setAudioCamera(camera); }, [camera, dyno.setAudioCamera]);
 
   useEffect(() => {
     if (!flash) return;
@@ -85,7 +87,7 @@ export function DynoBay({ onNavigate, onOpenControls, onOpenSettings, onOpenAudi
   };
 
   const setCameraPreset = (preset: CameraPreset) => {
-    setCamera(preset);
+    updateSettings({ camera: preset });
     setCameraNonce((n) => n + 1);
     dyno.setAudioCamera(preset);
   };
@@ -128,10 +130,9 @@ export function DynoBay({ onNavigate, onOpenControls, onOpenSettings, onOpenAudi
         }
       />
 
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_352px]">
-        <div className="min-w-0 space-y-4">
-          <Panel className="overflow-hidden">
-            <div className="relative h-[320px] sm:h-[380px] xl:h-[430px]">
+      <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
+          <Panel className="min-w-0 overflow-hidden">
+            <div className="relative h-[280px] sm:h-[320px] lg:h-[320px]">
               <CarScene vehicle={vehicle} state={snap} camera={camera} cameraNonce={cameraNonce} graphics={settings.graphics} headlights={settings.headlights} />
               <div className="pointer-events-none absolute inset-x-0 top-0 z-10 flex items-start justify-between gap-2 p-3">
                 <div className="thin-scroll pointer-events-auto flex max-w-[calc(100%-130px)] items-center gap-1 overflow-x-auto rounded-[10px] border border-white/10 bg-black/55 p-1 backdrop-blur-md sm:max-w-[calc(100%-190px)]">
@@ -250,6 +251,10 @@ export function DynoBay({ onNavigate, onOpenControls, onOpenSettings, onOpenAudi
             </div>
           </Panel>
 
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_352px]">
+        <div className="min-w-0 space-y-4">
           <Panel>
             <PanelHeader
               eyebrow="Dynamometer · live trace"
@@ -391,6 +396,14 @@ export function DynoBay({ onNavigate, onOpenControls, onOpenSettings, onOpenAudi
                 </div>
               </div>
 
+              <details className="mt-3 rounded-lg border border-line-soft bg-black/20 p-2.5">
+                <summary className="cursor-pointer label-xs">Powertrain diagnostics</summary>
+                <div className="mt-2 space-y-1 font-mono text-[10px] text-mut">
+                  <div>Engine {nf(snap.rpm)} rpm · Input {nf(snap.gearboxInputRpm)} rpm · Wheel {nf(snap.rollerRpm)} rpm</div>
+                  <div>Clutch slip {nf(snap.clutchSlipRpm)} rpm · Clutch torque {nf(snap.clutchTorqueNm)} Nm</div>
+                  <div>Engine net {nf(snap.engineTorqueNm)} Nm · Effective throttle {nf(snap.effectiveThrottle * 100)}% · Audio {dyno.audioReady ? "ready" : "not ready"}</div>
+                </div>
+              </details>
               <div className="mt-3 grid grid-cols-5 gap-1.5">
                 <Lamp icon={<TriangleAlert size={12} />} label="CEL" active={snap.cel} tone="danger" />
                 <Lamp icon={<BatteryCharging size={12} />} label="BAT" active={!snap.engineOn} tone="warm" />

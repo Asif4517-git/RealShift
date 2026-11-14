@@ -50,15 +50,17 @@ export function SettingsModal({
   onClose: () => void;
   initialTab?: SettingsTab;
 }) {
-  const { settings, updateSettings, updateAudio, bindings, resetBindings, runs, clearRuns, resetBinding } = useStore();
+  const { settings, updateSettings, updateAudio, bindings, resetBindings, resetAllSettings, runs, clearRuns, resetBinding, vehicle } = useStore();
   const [tab, setTab] = useState<SettingsTab>(initialTab);
   const [confirmClear, setConfirmClear] = useState(false);
+  const [confirmReset, setConfirmReset] = useState(false);
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
     if (open) {
       setTab(initialTab);
       setSaved(false);
+      setConfirmReset(false);
     }
   }, [open, initialTab]);
 
@@ -105,8 +107,21 @@ export function SettingsModal({
         })}
       </div>
 
+      <div className="mb-4 rounded-xl border border-warm/40 bg-warm/[0.06] p-3">
+        <p className="text-sm font-semibold text-fg">RESET ALL SETTINGS</p>
+        <p className="mt-1 text-[11.5px] text-mut">Restores audio, graphics, units, clutch, load, camera, cluster, display preferences and keyboard bindings. Saved dyno runs and the selected vehicle are kept.</p>
+        {confirmReset ? <div className="mt-2 flex gap-2"><Button variant="danger" size="sm" onClick={() => { resetAllSettings(); setConfirmReset(false); markSaved(); }}>Confirm reset</Button><Button variant="ghost" size="sm" onClick={() => setConfirmReset(false)}>Cancel</Button></div>
+          : <Button variant="outline" size="sm" className="mt-2" onClick={() => setConfirmReset(true)}><RotateCcw size={11} /> Reset all settings</Button>}
+      </div>
+
       {tab === "audio" && (
         <div className="space-y-4">
+          <div className="rounded-lg border border-accent/20 bg-accent/[0.04] p-3 text-[11.5px] text-mut">
+            <p className="label-xs text-accent">Recommended audio mix</p>
+            <p className="mt-1">For {vehicle.engine.layout} {vehicle.engine.fuel.toLowerCase()}: engine 88%, exhaust {vehicle.engine.cylinders >= 6 ? 80 : 70}%, intake 46%, turbo {vehicle.engine.boostBar ? 45 : 0}%. A starting point, not a measured calibration.</p>
+            <p>Current: engine {Math.round(audio.engine * 100)}%, exhaust {Math.round(audio.exhaust * 100)}%, intake {Math.round(audio.intake * 100)}%, turbo {Math.round(audio.turbo * 100)}%.</p>
+            <Button variant="outline" size="sm" className="mt-2" onClick={() => { updateAudio({ engine: 0.88, exhaust: vehicle.engine.cylinders >= 6 ? 0.8 : 0.7, intake: 0.46, turbo: vehicle.engine.boostBar ? 0.45 : 0 }); markSaved(); }}>Apply recommendation</Button>
+          </div>
           <div className="rounded-xl border border-accent/20 bg-accent/[0.045] p-3">
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-2">
@@ -142,7 +157,7 @@ export function SettingsModal({
                 options={[{ value: "low", label: "Low" }, { value: "medium", label: "Medium" }, { value: "high", label: "High" }]}
                 size="sm"
               />
-              <p className="mt-1.5 text-[11px] leading-relaxed text-mut-2">Quality controls the rendered sample rate and loop length of the combustion-cycle bands. Changing it re-renders on the next engine start.</p>
+              <p className="mt-1.5 text-[11px] leading-relaxed text-mut-2">Quality adjusts ancillary filter settings; bundled recording quality is unchanged.</p>
             </div>
             <div>
               <Toggle checked={audio.muted} onChange={(value) => { updateAudio({ muted: value }); markSaved(); }} label="Mute all audio" description="Engine audio continues silently; no state is lost." />
@@ -161,6 +176,12 @@ export function SettingsModal({
 
       {tab === "simulation" && (
         <div className="space-y-4">
+          <div className="rounded-lg border border-accent/20 bg-accent/[0.04] p-3 text-[11.5px] text-mut">
+            <p className="label-xs text-accent">Recommended settings</p>
+            <p className="mt-1">Suggested roller load {Math.round(Math.min(45, Math.max(18, 18 + vehicle.engine.torqueNm / 35)))}% for this engine's torque, with assisted clutch for repeatable pulls. This is a simulation starting point, not a dyno calibration.</p>
+            <p>Current: {settings.dynoLoad}% · {settings.clutchMode} clutch.</p>
+            <Button variant="outline" size="sm" className="mt-2" onClick={() => { updateSettings({ dynoLoad: Math.round(Math.min(45, Math.max(18, 18 + vehicle.engine.torqueNm / 35))), clutchMode: "assisted" }); markSaved(); }}>Apply recommendation</Button>
+          </div>
           <div>
             <p className="label-xs mb-1.5">Clutch behaviour</p>
             <Segmented
@@ -175,7 +196,7 @@ export function SettingsModal({
             <div className="mt-2 rounded-lg border border-line-soft bg-black/20 px-3 py-2 text-[11.5px] leading-relaxed text-mut">
               {settings.clutchMode === "manual" && "Every shift requires the clutch pedal. Releasing the clutch at low wheel speed can stall the engine. Simulates clutch slip and driveline lock-up."}
               {settings.clutchMode === "assisted" && "During a gear change the simulator opens the clutch, then re-engages with progressive slip. The pedal still works and produces independent engine rpm in neutral."}
-              {settings.clutchMode === "auto" && "The clutch is managed automatically. Gears engage with immediate rev-matching. Best for repeatable dyno pulls and first-time operators."}
+              {settings.clutchMode === "auto" && "The clutch is managed automatically. Shifts open and reconnect the clutch progressively. Best for repeatable dyno pulls and first-time operators."}
             </div>
           </div>
           <div className="grid grid-cols-1 gap-x-5 sm:grid-cols-2">
