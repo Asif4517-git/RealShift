@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test:physics": "esbuild tests/physics.test.ts --bundle --platform=node --format=esm --outfile=/tmp/realshift-physics-test.mjs && node /tmp/realshift-physics-test.mjs"
   },
   "dependencies": {
     "clsx": "2.1.1",

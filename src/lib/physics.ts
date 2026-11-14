@@ -47,6 +47,7 @@ export type SimEvent =
   | "shift-up"
   | "shift-down"
   | "gear-reject"
+  | "overrev-reject"
   | "limiter"
   | "bov"
   | "pop"
@@ -131,6 +132,7 @@ export class DynoSimulation {
   brake = 0;
   steer = 0;
   autoClutchTimer = 0;
+  shiftRevMatchRpm = 0;
   startTimer = 0;
   stallTimer = 0;
   boost = 0;
@@ -208,12 +210,16 @@ export class DynoSimulation {
     this.clutchHeat = 0;
     this.idleIntegral = 0;
     this.inputShaftRpm = 0;
+    this.autoClutchTimer = 0;
+    this.shiftRevMatchRpm = 0;
+    this.startTimer = 0;
+    this.events = [];
   }
 
   setClutchMode(mode: ClutchMode) {
     if (this.clutchMode === mode) return;
     this.clutchMode = mode;
-    if (mode === "auto") this.clutchActual = 0;
+
   }
 
   drainEvents() {
@@ -297,59 +303,26 @@ export class DynoSimulation {
       this.emit("gear-reject");
       return;
     }
+    const ratio = target === -1 ? -this.vehicle.gearbox.reverse * this.vehicle.gearbox.finalDrive
+      : target === 0 ? 0 : this.vehicle.gearbox.ratios[target - 1] * this.vehicle.gearbox.finalDrive;
+    const inputRpm = this.wheelOmega * ratio * 60 / (2 * Math.PI);
+    if (inputRpm > this.vehicle.engine.limiter * 1.05) {
+      this.emit("overrev-reject");
+      return;
+    }
     const previous = this.gear;
     this.gear = target;
-    if (this.clutchMode === "assisted" && target !== 0) {
+    if (this.clutchMode !== "manual") {
       this.clutchActual = 1;
-      this.autoClutchTimer = 0.42;
-    }
-    if (this.clutchMode === "auto") {
-      this.clutchActual = 0;
-      if (target !== 0) this.syncRpmToWheels();
-    }
-    if (target !== 0 && previous === 0 && this.clutchActual < 0.4 && this.clutchMode === "manual" && this.throttle > 0.2) {
-      this.emit("pop");
+      this.autoClutchTimer = 0.32;
+      this.shiftRevMatchRpm = previous > 0 && target > 0 && target < previous
+        ? Math.min(inputRpm, this.vehicle.engine.limiter - 150) : 0;
     }
     this.emit(target > previous ? "shift-up" : "shift-down");
   }
 
   private shift(dir: 1 | -1) {
-    const top = this.vehicle.gearbox.speeds;
-    const next = this.gear + dir;
-    if (next > top || next < -1) return;
-    if (!this.canShift()) {
-      this.emit("gear-reject");
-      return;
-    }
-    const previous = this.gear;
-    this.gear = next;
-    if (this.clutchMode === "assisted" && next !== 0) {
-      this.clutchActual = 1;
-      this.autoClutchTimer = 0.42;
-    }
-    if (this.clutchMode === "auto") {
-      this.clutchActual = 0;
-      if (next !== 0) {
-        const rpmFromWheel = Math.abs(this.wheelOmega) * this.wheelRadius;
-        void rpmFromWheel;
-        this.syncRpmToWheels();
-      }
-    }
-    if (next !== 0 && previous === 0 && this.clutchActual < 0.4 && this.clutchMode === "manual" && this.throttle > 0.2) {
-      this.emit("pop");
-    }
-    this.emit(dir > 0 ? "shift-up" : "shift-down");
-  }
-
-  private syncRpmToWheels() {
-    const ratio = this.totalRatio();
-    if (this.gear === 0 || Math.abs(ratio) < 0.01) return;
-    const rpm = Math.abs((this.wheelOmega * ratio * 60) / (2 * Math.PI));
-    // Never drag a stationary engine below idle when a gear is selected:
-    // below the idle threshold the clutch slips instead of locking.
-    if (rpm >= this.vehicle.engine.idleRpm * 0.9) {
-      this.rpm = clamp(rpm, 0, this.vehicle.engine.limiter + 200);
-    }
+    this.selectGear(this.gear + dir);
   }
 
   startPull() {
@@ -419,8 +392,7 @@ export class DynoSimulation {
     // Clutch actuator / assistant
     if (this.autoClutchTimer > 0) this.autoClutchTimer = Math.max(0, this.autoClutchTimer - dt);
     let clutchTarget = this.clutchPedal;
-    if (this.clutchMode === "assisted") clutchTarget = Math.max(clutchTarget, this.autoClutchTimer > 0 ? 1 : 0);
-    if (this.clutchMode === "auto") clutchTarget = 0;
+    if (this.clutchMode !== "manual") clutchTarget = Math.max(clutchTarget, this.autoClutchTimer > 0 ? 1 : 0);
     const clutchRate = this.clutchMode === "auto" ? 3 : 4.2;
     this.clutchActual += clamp(clutchTarget - this.clutchActual, -clutchRate * dt, clutchRate * dt);
     this.clutchActual = clamp(this.clutchActual, 0, 1);
@@ -465,7 +437,10 @@ export class DynoSimulation {
       const boostFactor = turbo
         ? 0.58 + 0.42 * clamp(this.boost / Math.max(eng.boostBar ?? 1, 0.1), 0, 1.1)
         : 1;
-      grossTorque = this.torqueAt(this.rpm) * this.throttle * boostFactor;
+      // Assisted shifts interrupt drive torque while the clutch is open.
+      const effectiveThrottle = this.autoClutchTimer > 0
+        ? clamp((this.shiftRevMatchRpm - this.rpm) / 900, 0, 0.65) : this.throttle;
+      grossTorque = this.torqueAt(this.rpm) * effectiveThrottle * boostFactor;
       if (this.throttle < 0.07) {
         const idleWindow = this.rpm < eng.idleRpm + 420;
         const error = eng.idleRpm - this.rpm;
@@ -479,7 +454,7 @@ export class DynoSimulation {
       }
       // Assisted / bypass modes provide a low-speed anti-stall torque reserve.
       // Manual mode gets no such aid and can stall like a real car.
-      if (this.clutchMode !== "manual" && this.gear !== 0 && this.rpm < eng.idleRpm * 1.5) {
+      if (this.clutchMode !== "manual" && this.gear !== 0 && this.clutchActual < 0.9 && this.rpm < eng.idleRpm * 1.5) {
         const reserve = this.vehicle.engine.torqueCurve.reduce((max, point) => Math.max(max, point.nm), 0) * 0.34;
         grossTorque += reserve * smooth((eng.idleRpm * 1.55 - this.rpm) / (eng.idleRpm * 0.75));
       }
@@ -496,98 +471,48 @@ export class DynoSimulation {
       }
     }
 
-    const clutchOpen = this.gear === 0 || this.clutchActual > 0.97;
-    // Progressive clamp curve: pedal travel 0–18% is free play, force builds
-    // through the bite point and fully clamps near the top of the travel.
-    const clampForce = smooth(((1 - this.clutchActual) - 0.14) / 0.78);
-    // Friction fade: sustained slip heats the friction disc and reduces capacity.
-    const fade = 1 - clamp(this.clutchHeat / 140, 0, 0.38);
     const ratio = this.totalRatio();
+    const clutchOpen = ratio === 0 || this.clutchActual > 0.97;
+    const clampForce = smooth(((1 - this.clutchActual) - 0.14) / 0.78);
+    const fade = 1 - clamp(this.clutchHeat / 140, 0, 0.38);
+    const wheelInertia = (v.chassis.weightKg + 1250) * r * r + 9 + (gearbox.drivetrain === "4WD" ? 4 : 0);
+    const oldWheel = this.wheelOmega;
+    const resistForce = v.chassis.weightKg * 9.81 * 0.014
+      + 0.5 * 1.2 * 2.2 * (v.chassis.widthMm / 1000) * Math.pow(this.wheelOmega * r, 2)
+      + this.dynoLoad * 7.2 + this.brake * 14500;
+    const resistTorque = sign(this.wheelOmega) * resistForce * r;
+    let engineOmega = this.rpm * (2 * Math.PI / 60);
+    const engineNet = this.engineOn ? grossTorque - friction : -26;
     let clutchTorque = 0;
-
-    if (!clutchOpen && ratio !== 0 && this.engineOn) {
-      const wheelRpm = Math.abs((this.wheelOmega * ratio * 60) / (2 * Math.PI));
-      const delta = this.rpm - wheelRpm;
+    if (!clutchOpen && this.engineOn) {
       let capacity = gearbox.clutchCapacityNm * clampForce * fade;
-      // Anti-stall bite limiting: never ask the engine for more than it can hold
-      // against the clutch below its assisted idle floor.
       if (this.clutchMode !== "manual" && this.rpm < eng.idleRpm * 1.55) {
-        const holdable = Math.max(28, grossTorque - friction + 12);
-        capacity = Math.min(capacity, holdable);
+        capacity = Math.min(capacity, Math.max(0, grossTorque - friction + 12));
       }
-      clutchTorque = Math.sign(delta) * Math.min(capacity, Math.abs(delta) * 1.4 + 18);
-      // Slip energy is torque through the speed difference; heat rises and cools.
-      const slipEnergy = Math.abs(clutchTorque * delta) / 1000;
-      this.clutchHeat = clamp(this.clutchHeat + slipEnergy * dt * 0.9 - dt * 0.55, 0, 160);
-      if (Math.abs(delta) < 6 && clampForce > 0.85) clutchTorque = 0;
-      this.clutchSlipRpm = Math.abs(delta);
+      // Impulse needed to bring the two shafts together after the other torques
+      // act during this step. Clamp to friction capacity; never teleport RPM.
+      const predictedEngine = engineOmega + engineNet / eng.flywheelInertia * dt;
+      const predictedWheel = this.wheelOmega - resistTorque / wheelInertia * dt;
+      const mismatch = predictedEngine - predictedWheel * ratio;
+      const effectiveMass = 1 / eng.flywheelInertia + ratio * ratio * gearbox.efficiency / wheelInertia;
+      clutchTorque = clamp(mismatch / (effectiveMass * dt), -capacity, capacity);
+      const slip = engineOmega - this.wheelOmega * ratio;
+      this.clutchHeat = clamp(this.clutchHeat + Math.abs(clutchTorque * slip) * dt / 1000 * 0.9 - dt * 0.55, 0, 160);
     } else {
-      this.clutchSlipRpm = 0;
+      this.clutchHeat = Math.max(0, this.clutchHeat - dt * 0.55);
     }
-
-    const locked =
-      !clutchOpen && this.engineOn && clampForce > 0.9 && this.clutchSlipRpm < 90 && ratio !== 0;
-
-    const resistForceAtWheel =
-      sign(this.wheelOmega) * (v.chassis.weightKg * 9.81 * 0.014 + 0.5 * 1.2 * 2.2 * (v.chassis.widthMm / 1000) * Math.pow(this.wheelOmega * r, 2)) +
-      sign(this.wheelOmega) * this.dynoLoad * 7.2 +
-      sign(this.wheelOmega) * this.brake * 14500;
-    const resistTorque = resistForceAtWheel * r;
-
-    if (locked) {
-      const driveTorque = (grossTorque - friction) * ratio * gearbox.efficiency;
-      const engineInertiaAtWheel = eng.flywheelInertia * ratio * ratio * gearbox.efficiency;
-      const rollerEquivalentKg = 900;
-      const inertia =
-        engineInertiaAtWheel +
-        (v.chassis.weightKg + rollerEquivalentKg) * r * r +
-        9 +
-        (gearbox.drivetrain === "4WD" ? 4 : 0);
-      let alpha = (driveTorque - resistTorque) / inertia;
-      if (Math.abs(this.wheelOmega) < 0.5 && this.brake > 0.05) alpha = 0;
-      this.wheelOmega += alpha * dt;
-      if (this.brake > 0.02 && sign(this.wheelOmega) !== sign(this.wheelOmega - alpha * dt)) {
-        this.wheelOmega = 0;
-      }
-      let newRpm = Math.abs((this.wheelOmega * ratio * 60) / (2 * Math.PI));
-      this.rpm = clamp(newRpm, 0, eng.limiter + 120);
-      if (this.rpm < eng.idleRpm * 0.52 && Math.abs(this.wheelOmega) * r * 3.6 < 8) {
-        this.stallTimer += dt;
-        if (this.stallTimer > 0.65) this.stall();
-      } else {
-        this.stallTimer = 0;
-      }
-    } else {
-      // Engine free / slipping
-      const netEngineTorque = grossTorque - friction - clutchTorque;
-      if (this.engineOn) {
-        const rpmPerSec = (netEngineTorque / eng.flywheelInertia) * (60 / (2 * Math.PI));
-        this.rpm += rpmPerSec * dt;
-        this.rpm = clamp(this.rpm, 0, eng.limiter + 220);
-        if (this.rpm >= eng.limiter && this.fuelCutTimer <= 0) {
-          this.fuelCutTimer = 0.09;
-          this.limiterActive = true;
-          this.emit("limiter");
-        }
-      } else {
-        this.rpm = Math.max(0, this.rpm - (26 / eng.flywheelInertia) * dt * 9.55);
-        this.limiterActive = false;
-      }
-
-      const drivenTorque = clutchTorque * ratio * gearbox.efficiency;
-      const wheelInertia = (v.chassis.weightKg + 1250) * r * r + 9;
-      if (!clutchOpen) {
-        this.wheelOmega += ((drivenTorque - resistTorque) / wheelInertia) * dt;
-      } else {
-        this.wheelOmega += (-resistTorque / wheelInertia) * dt;
-      }
-      if (this.brake > 0.03 && Math.abs(this.wheelOmega) < 0.25) this.wheelOmega = 0;
-      if (this.wheelOmega * this.brake > 0) {
-        // brake opposes motion, handled by resist sign
-      }
-      this.stallTimer = 0;
-      if (!this.engineOn) this.clutchSlipRpm = 0;
-    }
+    engineOmega = Math.max(0, engineOmega + (engineNet - clutchTorque) / eng.flywheelInertia * dt);
+    this.rpm = clamp(engineOmega * 60 / (2 * Math.PI), 0, eng.limiter + 220);
+    const drivenTorque = clutchTorque * ratio * gearbox.efficiency;
+    this.wheelOmega += (drivenTorque - resistTorque) / wheelInertia * dt;
+    // Static resistance cannot reverse a stopped roller on its own.
+    if (oldWheel !== 0 && sign(oldWheel) !== sign(this.wheelOmega) && Math.abs(drivenTorque) < resistForce * r) this.wheelOmega = 0;
+    if (oldWheel === 0 && Math.abs(drivenTorque) < resistForce * r) this.wheelOmega = 0;
+    this.clutchSlipRpm = !clutchOpen && this.engineOn ? Math.abs(this.rpm - this.wheelOmega * ratio * 60 / (2 * Math.PI)) : 0;
+    if (this.engineOn && this.clutchMode === "manual" && !clutchOpen && this.rpm < eng.idleRpm * 0.52) {
+      this.stallTimer += dt;
+      if (this.stallTimer > 0.4) this.stall();
+    } else this.stallTimer = 0;
 
     // Speed limit reverse & sanity
     // Gearbox input-shaft speed (signed by the selected ratio) for instruments.
@@ -615,10 +540,7 @@ export class DynoSimulation {
 
     // Torque + power model (wheel values measured/derived from roller state)
     const wheelAngular = Math.abs(this.wheelOmega);
-    const transmittedCrankTorque = locked
-      ? grossTorque - friction
-      : Math.abs(clutchTorque) * (this.engineOn ? 1 : 0);
-    this.wheelTorque = transmittedCrankTorque * ratio * gearbox.efficiency * 0.92;
+    this.wheelTorque = clutchTorque * ratio * gearbox.efficiency;
     this.wheelPowerHp = (Math.max(0, this.wheelTorque) * wheelAngular) / 745.7;
     this.enginePowerKw = (Math.abs(grossTorque) * this.rpm) / 9549;
     this.enginePowerHp = Math.max(0, this.enginePowerKw) * 1.34102;

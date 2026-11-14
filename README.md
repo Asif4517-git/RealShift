@@ -32,7 +32,7 @@ Audio is created on the first user gesture (browser autoplay policy).
 | Gearbox | Individual ratios and final drive per vehicle, reverse and neutral, sequential and direct selection |
 | Dyno | Rolling-road resistance, roller inertia, roller state derived speed and torque, live power/torque trace, run archive (up to 14 stored traces) |
 | Instrument cluster | Seven original selectable designs (performance, classic analogue, modern digital, Bavaria, elegance, Stuttgart five-dial, minimal), all fed by the same live snapshot: rpm, roller speed, gear, redline, shift lights, temperatures, fuel and warning lamps. Selection persists. |
-| Audio | Per-vehicle rendered combustion-cycle engine: cylinder firing pulses, bank imbalance, exhaust/intake resonance networks, three seamless RPM-band loops, load and boost spectral mapping, turbo, overrun, limiter, transmission, rollers and workshop convolution; eight routed buses plus master |
+| Audio | Licensed engine-family recording loops crossfaded by simulation RPM, with synthetic auxiliary effects and a procedural fallback; see the audio manifest for approximations and limitations |
 | 3D | Three.js garage / dyno bay, procedurally built vehicles from published dimensions, rotating wheels and rollers, lights, cutaway engine view, seven camera positions |
 | Controls | Fully rebindable keys through a central input manager, conflict detection, per-binding reset, persistence, blur-safe releases |
 | Data | Local persistence of settings, bindings, selected vehicle and dyno runs; JSON export of run traces |
@@ -44,7 +44,7 @@ Audio is created on the first user gesture (browser autoplay policy).
 src/
   lib/vehicles.ts      sourced vehicle database, torque anchors, audio profiles
   lib/physics.ts       fixed-step engine / clutch / gearbox / roller model
-  lib/audio.ts         rendered combustion-cycle engine audio
+  lib/audio.ts         recorded loops and auxiliary effects
   lib/store.tsx        settings, bindings, persistence, keyboard input manager
   hooks/useDyno.ts     fixed 120 Hz loop connecting physics → audio → UI snapshot
   three/CarScene.tsx   original procedural vehicle + dyno bay renderer
@@ -79,57 +79,24 @@ Readouts are labelled by provenance:
 This is a software simulation, not a load-cell measurement. Tyre slip, torsional
 vibration and full thermal models are simplified.
 
-## Audio architecture (v2)
+## Audio and source credits
 
-The previous audio layer used one oscillator bank and static noise. It was replaced
-rather than patched.
+The primary engine voice blends locally bundled recorded engine loops at
+RPM anchors. Sources, licences, edits and vehicle mapping are documented in
+[`src/assets/engine/MANIFEST.md`](src/assets/engine/MANIFEST.md). Most
+recordings are approximations, not the selected vehicle. The S2000 high band
+uses an F20C recording. The library does not yet contain a full matched
+idle/acceleration/overrun/start/stop bank for each vehicle; gain/EQ and
+playback-rate changes approximate missing conditions, and auxiliary effects
+and the decode-error fallback are synthetic. Listening validation remains
+necessary; no claim of complete realism is made.
 
-**What is rendered per vehicle**
-
-Every vehicle generates its own PCM voice offline in the browser. Each cylinder fires as
-a shaped pressure pulse (rise + exponential decay) with deterministic timing jitter,
-per-cylinder amplitude imbalance and — for the cross-plane V8 — uneven pulse energy.
-Those pulses excite a tuned exhaust resonance network and a separate intake resonance
-network, plus broadband transient air noise per cylinder and a mechanical
-firing-order body layer. The result is saturated, low-pass shaped and DC-blocked, then
-folded onto itself with an equal-power seam so the loop has no click.
-
-Three loop bands are rendered per vehicle at idle, ~46% and ~85% of redline. At playback
-they run continuously and are equal-power crossfaded based on live rpm, while playback
-rate tracks rpm between anchors (0.72×–1.42×). All bands therefore produce the same
-firing pitch at a given rpm — no chorus or detuned doubling.
-
-**What modulates the sound**
-
-- rpm → band crossfade, playback rate, low-pass cutoff, mechanical level
-- throttle/load → band level, exhaust and intake opening, transient gain
-- boost → dedicated turbo bus: compressor whistle, whoosh, blow-off
-- clutch/gear → independent rev behaviour, shift clunks, speed-driven gear whine
-- wheel speed → rollers, tyre contact, low roller hum
-- limiter → timed overrun crackle and high-band ducking
-- camera → stereo pan, distance tone, intake/exhaust balance, cabin low-pass and
-  reverb send (cockpit and cluster are interior perspectives)
-- start/stop → starter motor, ignition flare, shutdown run-down
-
-Audio is always normalised and passed through a glue compressor and a fast brickwall
-limiter. A live analyser can be inspected at `window.__REALSHIFT_AUDIO__.levels()`.
-
-**Honesty about recordings**
-
-No licensed engine recordings were available to bundle, and audio ripped from games or
-video platforms is not permissible. The app therefore does **not** claim to play a
-recording of any specific car. Every engine is an original rendered combustion model
-matched to that engine's cylinder count, firing frequency, displacement, induction,
-redline and character. This limitation is stated in the UI.
-
-## Audio testing performed
-
-- Rendered and played every engine class in Chromium with live analyser checks.
-- Verified non-silent idle and revving, no clipping (peak < 0.3, RMS ≈ 0.07–0.11).
-- Verified model rendering completes and re-renders once per vehicle/quality change.
-- Verified startup, shutdown, shift, rejected-shift, limiter and blow-off events fire
-  without console errors.
-- Verified camera presets alter intake/exhaust balance, cabin filtering and reverb.
+Clutch torque is limited by capacity and calculated from the relative angular
+velocity and effective inertia; shift selection does not assign engine RPM.
+Assisted/bypass shifts open the clutch, interrupt torque and reconnect it;
+assisted downshifts request a bounded rev match. The model remains simplified
+and is not a validated representation of real dyno hardware. A discussion of
+clutch stick/slip modelling is available from [MathWorks](https://www.mathworks.com/help/simulink/slref/building-a-clutch-lock-up-model.html).
 
 ## Vehicle data sources
 
@@ -168,8 +135,7 @@ wheelbase. No manufacturer CAD, logos, textures or game-ripped models are redist
 | [Inter](https://fonts.google.com/specimen/Inter) | SIL OFL 1.1 | UI typeface |
 | [JetBrains Mono](https://fonts.google.com/specimen/JetBrains+Mono) | SIL OFL 1.1 | Telemetry typeface |
 
-All vehicle artwork, the dyno bay, the audio synthesis engine, the physics modules and
-the interface are original work created for this project.
+Vehicle artwork, the dyno bay, physics and interface are original project work. Recorded audio sources are credited in the manifest.
 
 ## Persistence keys
 
@@ -203,21 +169,16 @@ Switching designs never touches the simulation; the choice is saved in settings.
 
 ## Transmission validation
 
-A scripted sweep across all 11 vehicles and all three clutch modes checks: idle
-stability, free revving in neutral, rpm settling on throttle release, gear engagement
-with and without the clutch, stall when releasing the clutch at a standstill in manual
-mode, progressive launch, gear-ratio-dependent roller speed, pull sampling, reverse
-lock-out, neutral isolation from the rollers, and brake hold. The dyno is stationary:
-only the driven wheels and rollers rotate, and speed is derived from roller angular
-velocity and tyre radius.
+`npm run test:physics` exercises the fixed-step simulation for a petrol four,
+diesel and V8 in all three clutch modes, plus manual stall, an unsafe downshift
+and 180 seconds of numerical operation. These are automated model tests, not
+browser, listening or real-world validation.
 
 ## Known limitations
 
-- **Engine recordings:** no licensed recording set for these vehicles could be
-  obtained for redistribution, and game/YouTube audio is not permissible. The audio is
-  therefore an original rendered combustion model, labelled as such, not a sampled
-  recording. Licensed recordings can replace the three rendered bands later without
-  changing the mixer or state integration.
+- **Engine recordings:** the bundled bank is incomplete and uses family
+  approximations, some pitch extrapolation and synthetic ancillary effects;
+  see the audio manifest. Listening validation is still required.
 - **3D models:** downloadable Sketchfab vehicle models could not be verified for licence
   and geometry accuracy inside this environment, so the existing licence-clean procedural
   bodies were retained and refined rather than replaced with unverified assets. They are
@@ -226,24 +187,3 @@ velocity and tyre radius.
 - Simulated power figures are calculated estimates, not dyno-cell measurements.
 - Tyre slip, suspension travel and full ECU/thermal models are simplified.
 - Runs and settings persist per browser profile only.
-
-## This upgrade (preservation-first)
-
-Existing navigation, garage layout, colour system, vehicle cards, dyno bay, run archive,
-Data Log and About page were kept. Targeted changes only:
-
-- **Readability:** typography scale raised throughout working UI, secondary text
-  contrast improved (muted colours lifted), buttons and key controls enlarged, labels
-  made less cryptic. The Creator/portfolio card and its dimensions were left untouched.
-- **Instrument clusters:** seven selectable original designs, persisted, driven by the
-  same simulation snapshot. Placed in the existing Live Cluster panel.
-- **Transmission:** nonlinear clutch clamp/bite curve, free play, friction fade from slip
-  heat, idle-governor integral term, low-speed anti-stall reserve, clutch slip energy,
-  gearbox input-shaft speed, reverse lock-out, stronger service brake, and pull sampling
-  moved from wall-clock to simulation time.
-- **Audio:** load, overrun and free-rev timbre shaping (intake closes on overrun, exhaust
-  resonance sharpens, mechanical level depends on clutch/traction), camera-aware
-  intake/exhaust balance and reverb, plus more audible roller/tyre layers.
-- **Validation:** scripted 11-vehicle × 3-clutch-mode sweep for idle, revving, settle,
-  shift, launch, stall, ratio/speed relationships, neutral isolation, brake hold and pull
-  sampling.

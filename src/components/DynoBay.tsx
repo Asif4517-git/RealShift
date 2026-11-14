@@ -499,7 +499,7 @@ export function DynoBay({ onNavigate, onOpenControls, onOpenSettings, onOpenAudi
                   ? "You must hold the clutch to change gear. Dumping the clutch at low rpm can stall the engine."
                   : settings.clutchMode === "assisted"
                     ? "The clutch opens automatically during a shift, then re-engages with slip. You still control the pedal with Space."
-                    : "Clutch operation is handled automatically and gear changes are rev-synced. Useful for repeatable pulls."}
+                    : "Clutch operation is handled automatically. Shifts interrupt torque and reconnect progressively."}
               </p>
               <div className="mt-3 border-t border-line-soft pt-1">
                 <Slider
@@ -528,7 +528,7 @@ export function DynoBay({ onNavigate, onOpenControls, onOpenSettings, onOpenAudi
           </Panel>
 
           <Panel>
-            <PanelHeader eyebrow="Engine audio" title={vehicle.sound.label} right={<Chip icon={<Volume2 size={9} />}>Synth</Chip>} />
+            <PanelHeader eyebrow="Engine audio" title={vehicle.sound.label} right={<Chip icon={<Volume2 size={9} />}>Recorded</Chip>} />
             <div className="px-3.5 py-3">
               <div className="flex items-start gap-2.5">
                 <div className="flex h-9 w-9 shrink-0 items-end justify-center gap-[2px] rounded-lg border border-accent/20 bg-accent/[0.06] px-1.5 pb-1.5">
@@ -552,9 +552,9 @@ export function DynoBay({ onNavigate, onOpenControls, onOpenSettings, onOpenAudi
                 </IconButton>
               </div>
               <p className="mt-2 font-mono text-[9px] uppercase leading-relaxed tracking-[0.06em] text-mut-2">
-                {dyno.audioArmed ? (dyno.audioReady ? "Rendered combustion voice · 3 rpm bands · camera mix" : "Rendering combustion bands…") : "Audio starts on first input (browser gesture)"}
+                {dyno.audioArmed ? (dyno.audioReady ? "Recorded engine loops · RPM blend · camera mix" : "Loading engine recordings…") : "Audio starts on first input (browser gesture)"}
               </p>
-              <p className="mt-1 text-[10.5px] leading-relaxed text-mut-2">Original combustion-cycle synthesis tuned to this engine's firing order. Not a recording of the real car.</p>
+              <p className="mt-1 text-[10.5px] leading-relaxed text-mut-2">Recorded engine-family approximations; not the exact vehicle. Some RPM and load conditions use pitch shifting or synthetic effects. See the audio manifest for credits.</p>
             </div>
           </Panel>
         </div>

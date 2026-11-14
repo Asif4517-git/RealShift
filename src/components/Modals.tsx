@@ -145,7 +145,7 @@ export function SettingsModal({
               <p className="mt-1.5 text-[11px] leading-relaxed text-mut-2">Quality controls the rendered sample rate and loop length of the combustion-cycle bands. Changing it re-renders on the next engine start.</p>
             </div>
             <div>
-              <Toggle checked={audio.muted} onChange={(value) => { updateAudio({ muted: value }); markSaved(); }} label="Mute all audio" description="Engine synthesis continues silently; no state is lost." />
+              <Toggle checked={audio.muted} onChange={(value) => { updateAudio({ muted: value }); markSaved(); }} label="Mute all audio" description="Engine audio continues silently; no state is lost." />
               <Button variant="ghost" size="sm" className="mt-1" onClick={() => { updateSettings({ audio: { ...DEFAULT_AUDIO } }); markSaved(); }}><RotateCcw size={11} /> Reset audio mix</Button>
             </div>
           </div>
@@ -153,7 +153,7 @@ export function SettingsModal({
           <div className="rounded-lg border border-line-soft bg-black/20 px-3 py-2">
             <p className="flex items-start gap-2 text-[11px] leading-relaxed text-mut">
               <Info size={11} className="mt-0.5 shrink-0 text-mut-2" />
-              Browsers require a user gesture before audio output. The graph is created on the first ignition, throttle or shift input. Each vehicle renders its own combustion-cycle voice — cylinder firing pulses, exhaust and intake resonances, jitter and bank imbalance — then crossfades three RPM-band loops under load. No licensed recording was available to bundle, so this is clearly labelled original synthesis, not a recording of the real car.
+              Browsers require a user gesture before audio output. Engine recordings are crossfaded using live RPM. They are engine-family approximations, not exact vehicle recordings; missing RPM and load states are approximated. Some effects and the fallback voice remain synthetic. See src/assets/engine/MANIFEST.md for sources and licences.
             </p>
           </div>
         </div>

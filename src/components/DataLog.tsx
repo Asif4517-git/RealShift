@@ -330,7 +330,7 @@ export function DataLog({
               <PanelHeader eyebrow="Known limitations" title="Stated openly" />
               <div className="space-y-2 px-4 py-3 text-[12px] leading-relaxed text-mut">
                 <p>This chassis dyno is a deterministic software simulation, not an instrumented load cell. Power figures are calculated from modelled torque and roller state, then labelled as derived or estimated.</p>
-                <p>Engine audio is procedurally synthesised in the browser. Each engine architecture has its own firing frequency, harmonic spectrum, load response, turbo and diesel layers. It is not a recording of the real vehicle, and it is not presented as one.</p>
+                <p>Engine audio blends licensed recordings at estimated RPM anchors, mostly as engine-family approximations rather than the selected car. Some effects and the fallback remain synthetic.</p>
                 <p className="text-mut-2">Vehicles with four-wheel drive have their additional driveline loss modelled explicitly. Tyre slip, torsional vibration and full thermal models are simplified.</p>
               </div>
             </Panel>
@@ -347,7 +347,7 @@ export function DataLog({
                 <div>
                   <p className="label-xs mb-2">Voice layers per vehicle</p>
                   <div className="space-y-1.5">
-                    {["Combustion pulse train · per-cylinder firing", "Bank imbalance + timing jitter · uneven V8 burble", "Exhaust resonance bank · per-vehicle tuned modes", "Intake resonance bank · load-scaled bandpass", "Turbo whistle + compressor whoosh · boost driven", "Diesel pilot/main injection clatter", "Overrun crackle, limiter cuts, blow-off", "Transmission clunks and speed-driven gear whine", "Dyno rollers, tyre contact and room reverb"].map((line, index) => (
+                    {["Recorded idle and RPM bands · approximate family", "RPM-driven playback rate and crossfade", "Load-dependent gain and filtering", "Exhaust and intake EQ paths", "Synthetic boost-driven turbo layer", "Diesel-specific recorded loops", "Synthetic ancillary events", "Speed-driven roller and gear layers", "Camera perspective and room reverb"].map((line, index) => (
                       <div key={line} className="flex items-center gap-2 rounded-md border border-line-soft bg-black/20 px-2 py-1.5">
                         <span className="font-mono text-[8.5px] text-accent">{String(index + 1).padStart(2, "0")}</span>
                         <span className="text-[11.5px] text-[#c4cfc1]">{line}</span>
@@ -362,7 +362,7 @@ export function DataLog({
                       f<span className="text-mut-2">firing</span> = (rpm / 60) × (cylinders / 2)
                     </p>
                     <p className="mt-2 font-mono text-[9.5px] leading-relaxed text-mut-2">
-                      A four-cylinder at 3,000 rpm fires at 100 Hz. A V8 at the same speed fires at 200 Hz, before any harmonic shaping. This is why the same note is never reused across the fleet.
+                      A four-cylinder at 3,000 rpm fires at 100 Hz. A V8 at the same speed fires at 200 Hz, before any harmonic shaping. Several vehicles share approximate recording sets; see the audio manifest.
                     </p>
                   </div>
                   <p className="label-xs mb-2 mt-3">State inputs</p>
@@ -371,7 +371,7 @@ export function DataLog({
                   </div>
                   <div className="mt-3 rounded-lg border border-warm/20 bg-warm/[0.05] p-2.5">
                     <p className="label-xs text-warm">Audio licence & honesty</p>
-                    <p className="mt-1 text-[11px] leading-relaxed text-[#b7aa92]">No licensed engine recordings are bundled. The engine model is original synthesis written for RealShift. It is tuned to each vehicle's firing architecture and load behaviour, not sampled from the real car.</p>
+                    <p className="mt-1 text-[11px] leading-relaxed text-[#b7aa92]">Licensed edited recordings are bundled. Most are engine-family approximations; the S2000 high band uses an F20C recording. Sources, licences and limitations are documented in src/assets/engine/MANIFEST.md.</p>
                   </div>
                 </div>
               </div>
@@ -493,7 +493,7 @@ v        = ω_wheel · r · 3.6                  [km/h]`}</pre>
               <div className="space-y-1.5 px-3.5 py-3">
                 {[
                   ["sim/physics.ts", "engine, clutch, gearbox, roller state"],
-                  ["lib/audio.ts", "rendered combustion-cycle engine"],
+                  ["lib/audio.ts", "recorded loops and auxiliary effects"],
                   ["sim/store.tsx", "bindings, persistence, input manager"],
                   ["three/CarScene.tsx", "original procedural bay & vehicles"],
                   ["lib/vehicles.ts", "sourced vehicle database"],

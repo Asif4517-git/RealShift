@@ -1,20 +1,20 @@
-// REALSHIFT audio engine — v2.
-//
-// DESIGN NOTE / LICENCE NOTE
-// This module does NOT contain engine recordings. No licensed recording set was
-// available to bundle, and audio ripped from games / YouTube is not permissible.
-// Instead of looping a generic oscillator (the previous approach, which sounded
-// synthetic), the engine now renders complete combustion-cycle audio offline:
-// individual cylinder firing pulses with timing jitter, bank imbalance, exhaust
-// and intake resonance modes, mechanical noise and per-vehicle spectral shaping.
-// Three continuous RPM-band loops per vehicle are rendered and equal-power
-// crossfaded at playback time, with load-dependent filtering, boost, overrun,
-// limiter, transmission, roller and workshop layers.
-//
-// Every vehicle produces its own PCM voice from its firing order, displacement,
-// cylinder count, induction, redline and character. The UI labels this as an
-// original combustion model — never as a recording of the real car.
+// REALSHIFT audio: locally bundled, licensed engine recordings, blended by
+// simulated RPM. A procedural fallback is used only when decoding fails.
+// Sources, approximations, and missing load bands: src/assets/engine/MANIFEST.md.
 
+import i4Idle from "../assets/engine/i4s_idle.mp3?inline";
+import i4Rev from "../assets/engine/i4_rev.mp3?inline";
+import i4RevB from "../assets/engine/i4b_rev.mp3?inline";
+import s2000High from "../assets/engine/i4hi_hi.mp3?inline";
+import dieselIdle from "../assets/engine/d4s_idle.mp3?inline";
+import dieselRev from "../assets/engine/d4s_rev.mp3?inline";
+import v8Idle from "../assets/engine/v8x57_idle.mp3?inline";
+import v8Rev from "../assets/engine/v8x57_rev.mp3?inline";
+import v8High from "../assets/engine/v8xsc_hi.mp3?inline";
+import v6Idle from "../assets/engine/v6_idle.mp3?inline";
+import v6Rev from "../assets/engine/v6_rev.mp3?inline";
+import flatMid from "../assets/engine/f6_mid.mp3?inline";
+import flatHigh from "../assets/engine/f6_hi.mp3?inline";
 import type { SimEvent, SimSnapshot } from "./physics";
 import type { Vehicle } from "./vehicles";
 
@@ -78,7 +78,7 @@ interface Voice {
   boostBar: number;
 }
 
-const BAND_ANCHORS = [0.14, 0.46, 0.84];
+
 const CROSSPLANE = [0, 1, 0.45, 0.9, 0.1, 0.8, 0.55, 1];
 
 function hashString(value: string) {
@@ -401,7 +401,7 @@ export class EngineAudio {
 
   private bandGains: GainNode[] = [];
   private bandSources: AudioBufferSourceNode[] = [];
-  private bandAnchors = BAND_ANCHORS;
+  private bandAnchors: number[] = [];
   private bodyFilter!: BiquadFilterNode;
   private exhaustFilter!: BiquadFilterNode;
   private intakeFilter!: BiquadFilterNode;
@@ -535,32 +535,40 @@ export class EngineAudio {
     this.rendering = true;
     const vehicle = this.vehicle;
     const voice = this.voice;
-    const audioRate = this.quality === "low" ? 18000 : this.quality === "medium" ? 22050 : 28000;
-    const seconds = this.quality === "low" ? 0.85 : 1.15;
-    const renderSampleRate = audioRate;
-    const bands: Rendered[] = [];
-    for (let index = 0; index < BAND_ANCHORS.length; index++) {
-      const rpm = index === 0 ? voice.idleRpm : voice.redline * BAND_ANCHORS[index];
-      bands.push(renderEngineLoop(voice, rpm, renderSampleRate, seconds));
-      await new Promise((resolve) => setTimeout(resolve, 0));
-      if (vehicle.id !== this.vehicle.id) {
-        this.rendering = false;
-        return;
-      }
+    // Sample anchor RPMs were measured by the loop editor; see the manifest.
+    // Non-matching vehicles are explicitly approximate, not OEM recordings.
+    const clips: [string, number][] = voice.diesel
+      ? [[dieselIdle, 887], [dieselRev, 2191]]
+      : vehicle.engine.layout.includes("Flat")
+        ? [[v6Idle, 651], [flatMid, 3706], [flatHigh, 5193]]
+        : voice.cylinders === 8
+          ? [[v8Idle, 805], [v8Rev, 1444], [v8High, 6478]]
+          : voice.cylinders === 6
+            ? [[v6Idle, 651], [v6Rev, 4111]]
+            : [[i4Idle, 877], [i4Rev, 2274], [vehicle.engine.code === "F20C" ? s2000High : i4RevB, vehicle.engine.code === "F20C" ? 7317 : 2529]];
+    let buffers: AudioBuffer[];
+    try {
+      buffers = await Promise.all(clips.map(async ([url]) => {
+        const response = await fetch(url);
+        if (!response.ok) throw new Error(`Audio sample: ${response.status}`);
+        return this.ctx!.decodeAudioData(await response.arrayBuffer());
+      }));
+    } catch (error) {
+      console.warn("Recorded engine audio unavailable; using synthetic fallback", error);
+      const rate = this.ctx.sampleRate;
+      buffers = [voice.idleRpm, voice.redline * 0.46, voice.redline * 0.85]
+        .map((rpm) => makeBuffer(this.ctx!, renderEngineLoop(voice, rpm, rate, 1.15)));
+      clips.splice(0, clips.length, ["", voice.idleRpm], ["", voice.redline * 0.46], ["", voice.redline * 0.85]);
     }
     if (!this.ctx || vehicle.id !== this.vehicle.id) {
       this.rendering = false;
       return;
     }
     this.stopBandSources();
-    const compressorBus = this.engineBus;
-    for (let index = 0; index < bands.length; index++) {
-      const buffer = makeBuffer(this.ctx, bands[index]);
+    for (const buffer of buffers) {
       const source = this.ctx.createBufferSource();
       source.buffer = buffer;
       source.loop = true;
-      source.loopStart = 0;
-      source.loopEnd = buffer.duration;
       const gain = this.ctx.createGain();
       gain.gain.value = 0;
       source.connect(gain);
@@ -569,9 +577,9 @@ export class EngineAudio {
       this.bandSources.push(source);
       this.bandGains.push(gain);
     }
+    this.bandAnchors = clips.map((clip) => clip[1]);
     this.modelsReady = true;
     this.rendering = false;
-    this.bandAnchors = [voice.idleRpm, voice.redline * 0.46, voice.redline * 0.85];
     this.setVolumes(this.volumes);
     this.applyCamera();
     // prime band levels without a jump
@@ -579,7 +587,6 @@ export class EngineAudio {
       rpm: voice.idleRpm, idleRpm: voice.idleRpm, redline: voice.redline, throttle: 0,
     } as unknown as SimSnapshot;
     this.updateBands(snapshot, true);
-    void compressorBus;
   }
 
   private stopBandSources() {
@@ -635,6 +642,7 @@ export class EngineAudio {
       return gain;
     };
     this.engineBus = bus();
+    this.engineBus.gain.value = 1;
     this.exhaustBus = bus();
     this.intakeBus = bus();
     this.turboBus = bus();
@@ -863,7 +871,7 @@ export class EngineAudio {
           vehicle: self.vehicle.id,
           character: self.vehicle.sound.character,
           ctx: self.ctx?.state,
-          model: "rendered-combustion-v2",
+          model: "recorded-engine-loops",
         };
       },
       profile() {
@@ -877,36 +885,24 @@ export class EngineAudio {
     const rpm = Math.max(0, state.rpm);
     const load = state.throttle;
     const ratio = Math.min(1.1, rpm / this.voice.redline);
-    const weightFor = (index: number) => {
-      const anchors = [this.voice.idleRpm * 1.02, this.voice.redline * 0.46, this.voice.redline * 0.85];
-      if (index === 0) {
-        if (rpm <= anchors[0]) return 1;
-        if (rpm >= anchors[1]) return 0;
-        return 1 - (rpm - anchors[0]) / (anchors[1] - anchors[0]);
-      }
-      if (index === 1) {
-        if (rpm <= anchors[0]) return 0;
-        if (rpm < anchors[1]) return (rpm - anchors[0]) / (anchors[1] - anchors[0]);
-        if (rpm >= anchors[2]) return 0;
-        return 1 - (rpm - anchors[1]) / (anchors[2] - anchors[1]);
-      }
-      if (rpm <= anchors[1]) return 0;
-      if (rpm < anchors[2]) return (rpm - anchors[1]) / (anchors[2] - anchors[1]);
-      return 1;
-    };
-    const weights = [weightFor(0), weightFor(1), weightFor(2)];
-    const total = weights.reduce((a, b) => a + b, 0) || 1;
-    const running = state.engineOn || state.starting;
-    const loadLift = 0.8 + load * 0.38;
+    const anchors = this.bandAnchors;
+    const weights = anchors.map(() => 0);
+    if (rpm <= anchors[0]) weights[0] = 1;
+    else if (rpm >= anchors[anchors.length - 1]) weights[anchors.length - 1] = 1;
+    else {
+      const upper = anchors.findIndex((anchor) => anchor >= rpm);
+      const t = (rpm - anchors[upper - 1]) / (anchors[upper] - anchors[upper - 1]);
+      weights[upper - 1] = Math.cos(t * Math.PI / 2);
+      weights[upper] = Math.sin(t * Math.PI / 2);
+    }
+    const running = state.engineOn;
+    const loadLift = 0.72 + load * 0.28;
     this.bandGains.forEach((gain, index) => {
-      const target = (weights[index] / total) * (running ? loadLift : 0);
-      // Equal-power crossfade between adjacent rpm bands.
-      this.set(gain.gain, Math.pow(target, 1.12) * 0.95, immediate ? 0.02 : 0.05);
+      this.set(gain.gain, weights[index] * (running ? loadLift : 0), immediate ? 0.01 : 0.025);
       const source = this.bandSources[index];
       if (source) {
-        const anchor = this.bandAnchors[index];
-        const rate = Math.min(1.42, Math.max(0.72, rpm / anchor));
-        this.set(source.playbackRate, rpm > 0 ? rate : 1, 0.08);
+        const rate = Math.min(2.5, Math.max(0.45, rpm / anchors[index]));
+        this.set(source.playbackRate, rpm > 0 ? rate : 1, 0.025);
       }
     });
     this.set(this.idleRough.gain, state.rpm < this.voice.idleRpm * 1.5 && running ? 1 : 0.96);
@@ -971,7 +967,7 @@ export class EngineAudio {
     this.set(this.rollerHum.frequency, 10 + state.rollerRpm * 0.55, 0.12);
     this.set(this.rollerHumGain.gain, speed * 0.06, 0.15);
     this.set(this.gearWhine.frequency, 180 + state.rollerRpm * 4.2, 0.15);
-    this.set(this.gearWhineGain.gain, speed * 0.018 * (state.gear === 0 ? 0.2 : 1), 0.15);
+    this.set(this.gearWhineGain.gain, speed * 0.003 * (state.gear === 0 ? 0.2 : 1), 0.15);
     this.set(this.reverbGain.gain, this.volumes.ambience * (this.camera === "cockpit" || this.camera === "cluster" ? 0.25 : 1.2), 0.2);
     if (!state.engineOn) this.set(this.turboGain.gain, 0, 0.3);
   }
@@ -991,78 +987,21 @@ export class EngineAudio {
       case "crank":
         this.starter(now);
         break;
-      case "ignition":
-        this.ignition(now);
-        break;
+
       case "shutdown":
         this.shutdown(now);
         break;
       case "bov":
         this.blowOff(now);
         break;
-      case "shift-up":
-        this.shift(now, 160, 0.2);
-        break;
-      case "shift-down":
-        this.shift(now, 118, 0.23);
-        this.blip(now, 0.06);
-        break;
-      case "gear-reject":
-        this.shift(now, 330, 0.12);
-        break;
+
       case "pop":
         this.crackle(now, 1);
         break;
-      case "limiter":
-        this.crackle(now, 0.65);
-        this.duckEngine(now);
-        break;
+
       default:
         break;
     }
-  }
-
-  private shift(time: number, frequency: number, level: number) {
-    if (!this.ctx) return;
-    const ctx = this.ctx;
-    const osc = ctx.createOscillator();
-    osc.type = "triangle";
-    const gain = ctx.createGain();
-    const filter = ctx.createBiquadFilter();
-    filter.type = "lowpass";
-    filter.frequency.value = 520;
-    osc.frequency.setValueAtTime(frequency, time);
-    osc.frequency.exponentialRampToValueAtTime(42, time + 0.1);
-    gain.gain.setValueAtTime(0.0001, time);
-    gain.gain.exponentialRampToValueAtTime(level, time + 0.006);
-    gain.gain.exponentialRampToValueAtTime(0.0001, time + 0.15);
-    osc.connect(filter);
-    filter.connect(gain);
-    gain.connect(this.transBus);
-    osc.start(time);
-    osc.stop(time + 0.17);
-    this.burst(0.055, 2400, 0.05, this.transBus, 1.6);
-  }
-
-  private blip(time: number, level: number) {
-    if (!this.ctx) return;
-    const ctx = this.ctx;
-    const osc = ctx.createOscillator();
-    osc.type = "sawtooth";
-    const gain = ctx.createGain();
-    const filter = ctx.createBiquadFilter();
-    filter.type = "lowpass";
-    filter.frequency.value = 900;
-    osc.frequency.setValueAtTime(110, time);
-    osc.frequency.exponentialRampToValueAtTime(240, time + 0.12);
-    gain.gain.setValueAtTime(0.0001, time);
-    gain.gain.exponentialRampToValueAtTime(level, time + 0.02);
-    gain.gain.exponentialRampToValueAtTime(0.0001, time + 0.19);
-    osc.connect(filter);
-    filter.connect(gain);
-    gain.connect(this.exhaustBus);
-    osc.start(time);
-    osc.stop(time + 0.2);
   }
 
   private starter(time: number) {
@@ -1099,24 +1038,6 @@ export class EngineAudio {
     this.burst(0.6, 1800, 0.05, this.transBus, 1.3);
   }
 
-  private ignition(time: number) {
-    if (!this.ctx) return;
-    const ctx = this.ctx;
-    const osc = ctx.createOscillator();
-    osc.type = "sine";
-    const gain = ctx.createGain();
-    osc.frequency.setValueAtTime(58, time);
-    osc.frequency.exponentialRampToValueAtTime(120, time + 0.4);
-    gain.gain.setValueAtTime(0.0001, time);
-    gain.gain.exponentialRampToValueAtTime(0.24, time + 0.06);
-    gain.gain.exponentialRampToValueAtTime(0.0001, time + 0.55);
-    osc.connect(gain);
-    gain.connect(this.exhaustBus);
-    osc.start(time);
-    osc.stop(time + 0.6);
-    for (let i = 0; i < 3; i++) this.crackle(time + i * 0.06, 0.55 - i * 0.1);
-  }
-
   private shutdown(time: number) {
     if (!this.ctx) return;
     const ctx = this.ctx;
@@ -1146,18 +1067,6 @@ export class EngineAudio {
   private blowOff(_time: number) {
     this.burst(0.24, 3300, 0.11, this.turboBus, 3.2);
     this.burst(0.35, 1400, 0.05, this.turboBus, 1.1);
-  }
-
-  private duckEngine(time: number) {
-    const band = this.bandGains[2];
-    if (!band) return;
-    const ctx = this.ctx;
-    if (!ctx) return;
-    band.gain.cancelScheduledValues(time);
-    const current = band.gain.value;
-    band.gain.setValueAtTime(current, time);
-    band.gain.linearRampToValueAtTime(current * 0.25, time + 0.012);
-    band.gain.setTargetAtTime(current, time + 0.03, 0.05);
   }
 
   private burst(duration: number, frequency: number, level: number, destination: AudioNode, q = 1.1) {
