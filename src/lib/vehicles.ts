@@ -1083,6 +1083,36 @@ export const VEHICLES: Vehicle[] = [
     sources: [{ label: "Honda News — 2017 Civic Type R specifications", url: "https://hondanews.com/en-US/honda-automobiles/releases/release-dda03e0c69c6476cbf2e0c544555aeef-2017-civic-type-r-specifications-features" }],
     notes: "2017 US-market Touring, six-speed manual. Turbo boost is the published 22.8 psi, rounded to bar. Simulation parameters and wheel power are estimates.",
   },
+
+  {
+    id: "bmw-m3-g80-2021-manual", make: "BMW", model: "M3", variant: "Base 6MT", year: 2021,
+    generation: "G80 · US specification", bodyStyle: "Sedan", country: "Germany", tags: ["Twin turbo", "Sport sedan", "RWD"],
+    paint: [{name:"Alpine White",hex:"#e8e8df"},{name:"Isle of Man Green",hex:"#296348"},{name:"Black Sapphire",hex:"#181a1b"}],
+    engine: { code:"S58", displacementCc:2993, cylinders:6, layout:"Inline-6", induction:"Twin-turbocharged direct injection", aspiration:"Twin-Turbo", powerHp:473, powerRpm:6250, torqueNm:550, torqueRpm:"2,650–6,130 rpm", idleRpm:750, redline:7200, limiter:7400, compression:"9.3:1", boostBar:1.7, fuel:"Petrol", flywheelInertia:0.24, frictionTorque:36, crankingRpm:210,
+      torqueCurve:[{rpm:750,nm:180},{rpm:1500,nm:290},{rpm:2650,nm:550},{rpm:4000,nm:550},{rpm:6130,nm:550},{rpm:6250,nm:539},{rpm:7200,nm:440},{rpm:7400,nm:400}] },
+    gearbox: {type:"6-speed manual",speeds:6,ratios:[4.11,2.32,1.54,1.18,1,0.85],reverse:3.73,finalDrive:3.46,drivetrain:"RWD",efficiency:0.9,clutchCapacityNm:700},
+    chassis:{weightKg:1742,lengthMm:4803,widthMm:1887,heightMm:1433,wheelbaseMm:2858,tyre:"285/35R19",wheelDiameterIn:19},
+    dyno:{peakPowerHp:473,measuredWheelHp:426,driveLoss:0.1,note:"Wheel power is estimated, not a measured dyno result."},
+    sound:{character:"na-petrol-i6",label:"Turbo inline-six approximation",description:"BMW inline-six idle and a Supra dyno rev, not an S58 recording.",firingNote:"Six cylinders, three firing events per revolution",layers:["Inline-six idle", "Inline-six dyno rev", "Turbo approximation"],turbo:true,diesel:false,resonanceHz:88,rasp:0.45,revHappiness:0.9},
+    verified:["2993 cc S58", "473 hp @ 6250 rpm", "406 lb-ft", "6-speed manual and ratios", "3.46 final drive", "3840 lb curb weight"],
+    estimated:["Idle and limiter", "Torque curve between anchors", "Inertia", "Friction", "Clutch capacity", "Boost", "Drivetrain efficiency and wheel power"],
+    sources:[{label:"BMW press specifications reproduced by i4talk",url:"https://www.i4talk.com/threads/specs-the-new-2021-bmw-m3-sedan-and-m4-coupe.73/"},{label:"Car and Driver — 2021 M3 specifications",url:"https://www.caranddriver.com/bmw/m3/specs/2021/bmw_m3_bmw-m3_2021"}],
+    notes:"US base rear-drive manual, not the automatic Competition. Rolling radius uses the rear tyres; simulation parameters are estimates.",
+  },
+  {
+    id:"toyota-gr-supra-a90-2023-manual",make:"Toyota",model:"GR Supra",variant:"3.0 A91-MT",year:2023,generation:"A90 · US manual",bodyStyle:"Sports",country:"Japan",tags:["Turbocharged", "Inline-six", "RWD"],
+    paint:[{name:"CU Later Gray",hex:"#7a8081"},{name:"Absolute Zero",hex:"#eeeeea"},{name:"Nocturnal",hex:"#1b1c1c"}],
+    engine:{code:"B58",displacementCc:2998,cylinders:6,layout:"Inline-6",induction:"Twin-scroll single turbo",aspiration:"Turbo",powerHp:382,powerRpm:5800,torqueNm:499,torqueRpm:"1,800–5,000 rpm",idleRpm:750,redline:6600,limiter:6800,compression:"10.2:1",boostBar:1.2,fuel:"Petrol",flywheelInertia:0.23,frictionTorque:33,crankingRpm:210,
+      torqueCurve:[{rpm:750,nm:160},{rpm:1300,nm:300},{rpm:1800,nm:499},{rpm:4000,nm:499},{rpm:5000,nm:499},{rpm:5800,nm:469},{rpm:6600,nm:390},{rpm:6800,nm:360}]},
+    gearbox:{type:"6-speed manual",speeds:6,ratios:[4.11,2.32,1.54,1.18,1,0.85],reverse:3.73,finalDrive:3.46,drivetrain:"RWD",efficiency:0.9,clutchCapacityNm:650},
+    chassis:{weightKg:1537,lengthMm:4382,widthMm:1854,heightMm:1293,wheelbaseMm:2469,tyre:"275/35R19",wheelDiameterIn:19},
+    dyno:{peakPowerHp:382,measuredWheelHp:344,driveLoss:0.1,note:"Wheel power is estimated, not a measured dyno result."},
+    sound:{character:"na-petrol-i6",label:"Turbo inline-six approximation",description:"BMW inline-six idle and a modified earlier Supra dyno rev, not this GR Supra's B58.",firingNote:"Six cylinders, three firing events per revolution",layers:["Inline-six idle", "Inline-six dyno rev", "Turbo approximation"],turbo:true,diesel:false,resonanceHz:90,rasp:0.45,revHappiness:0.92},
+    verified:["3.0-litre turbo inline-six", "382 hp", "368 lb-ft", "6-speed manual", "3.46 final drive", "3389 lb curb weight", "275/35R19 rear tyres"],
+    estimated:["Individual gear and reverse ratios", "Idle and limiter", "Torque curve between anchors", "Inertia", "Friction", "Clutch capacity", "Boost", "Drivetrain efficiency and wheel power"],
+    sources:[{label:"Toyota — 2023 GR Supra brochure",url:"https://www.toyota.com/content/dam/toyota/brochures/pdf/2023/grsupra_ebrochure.pdf"},{label:"2023 A91-MT specifications",url:"https://www.motormatchup.com/catalog/Toyota/GR-Supra/2023/A91_MT-Edition-Manual-(SE)"},{label:"Autoweek — manual final drive",url:"https://www.autoweek.com/news/sports-cars/a41108920/2023-toyota-gr-supra-manual-drive-review/"}],
+    notes:"US A91-MT manual; ratios are provisional estimates and the speed limiter is not modelled.",
+  },
 ];
 
 export const getVehicle = (id: string) =>
