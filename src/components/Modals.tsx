@@ -536,7 +536,7 @@ export function DatasheetModal({ vehicle, onClose, onEnterDyno }: { vehicle: Veh
           <div className="mt-2 rounded-lg border border-line-soft bg-black/20 px-2.5 py-2">
             <p className="label-xs">Dyno note</p>
             <p className="mt-1 text-[11px] leading-relaxed text-mut">{vehicle.dyno.note}</p>
-            <p className="mt-1 font-mono text-[9px] uppercase tracking-[0.05em] text-mut-2">Calibrated wheel estimate: {nf(torqueValue(vehicle.dyno.measuredWheelHp, units), 0)} {units === "metric" ? "PS" : "hp"} · model drivetrain loss {(vehicle.dyno.driveLoss * 100).toFixed(0)}%</p>
+            <p className="mt-1 font-mono text-[9px] uppercase tracking-[0.05em] text-mut-2">Calibrated wheel estimate: {nf(vehicle.dyno.measuredWheelHp, 0)} hp · model drivetrain loss {(vehicle.dyno.driveLoss * 100).toFixed(0)}%</p>
           </div>
         </div>
       </div>

@@ -60,7 +60,7 @@ export function customVehicle(build: CustomBuild): Vehicle {
       torqueCurve: [{rpm:s.idleRpm,nm:s.torqueNm*0.55},{rpm:torquePeakRpm,nm:s.torqueNm},{rpm:peakRpm,nm:powerTorque},{rpm:s.limiter + 1,nm:powerTorque*0.8}],
     },
     gearbox: { ...base.gearbox, type: `${s.ratios.length}-speed custom manual`, speeds: s.ratios.length, ratios: [...s.ratios], reverse: s.reverse, finalDrive: s.finalDrive, drivetrain: s.drivetrain, clutchCapacityNm: s.clutchCapacityNm, efficiency: s.drivetrain === '4WD' ? 0.85 : 0.9 },
-    chassis: { ...base.chassis, weightKg: s.weightKg, tyre: s.tyre.toUpperCase(), wheelDiameterIn: Number(s.tyre.match(/R(\d{2})$/i)?.[1] || 18) },
+    chassis: { ...base.chassis, weightKg: s.weightKg, tyre: s.tyre.trim().toUpperCase(), wheelDiameterIn: Number(s.tyre.trim().match(/R(\d{2})$/i)?.[1] || 18) },
     dyno: { peakPowerHp:s.powerHp, measuredWheelHp:s.powerHp*(s.drivetrain === '4WD' ? 0.85 : 0.9), driveLoss:s.drivetrain === '4WD' ? 0.15 : 0.1, note: `Estimated; ${s.targetTopSpeed} km/h target is not a speed cap.` },
     sound: { ...base.sound, character, label: family ? 'Approximate engine-family audio' : 'Synthetic engine fallback', description: family ? 'Uses a generic recorded engine family, not a recording of this build.' : 'No matched engine-family recording is available; this build uses synthesized engine audio.', turbo:s.turbo, diesel:s.fuel === 'Diesel', firingNote:`${s.cylinders} cylinders`, layers:[family ? 'Approximate recorded engine' : 'Synthetic engine fallback'] },
     verified: [], estimated: ['All custom specifications, curve shape, losses and acoustic profile'], sources: [], notes: 'User-defined simulation, not a verified real vehicle. Top-speed target does not override physics.',

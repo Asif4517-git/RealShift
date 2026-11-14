@@ -33,7 +33,7 @@ site is available at `https://asif4517-git.github.io/RealShift/`.
 
 | Area | Implementation |
 | --- | --- |
-| Vehicle database | 11 real production models across NA petrol I4, turbo petrol I4, NA I4 sedan, NA V6, NA V8, twin-turbo flat-six, turbo diesel I4 and two 4×4 diesels |
+| Vehicle database | 17 real production models across petrol inline-three, inline-four, inline-six, V6, V8, flat-six and diesel configurations, plus user-defined custom vehicles |
 | Engine | Torque-anchor curve interpolation, flywheel inertia, friction/pumping losses, idle governor, boost lag, fuel-cut rev limiter, coolant/oil/fuel/battery state |
 | Clutch | Nonlinear clamp/bite curve, friction capacity, slip coupling, heat build-up with friction fade, manual/assisted/bypass modes, anti-stall reserve, stall behaviour and gearbox input-shaft speed |
 | Gearbox | Individual ratios and final drive per vehicle, reverse and neutral, sequential and direct selection |
@@ -146,8 +146,8 @@ Vehicle artwork, the dyno bay, physics and interface are original project work. 
 
 ## Persistence keys
 
-`realshift.settings.v1`, `realshift.bindings.v1`, `realshift.vehicle.v1`,
-`realshift.runs.v1` — stored in `localStorage` on the current device only.
+`realshift.settings.v2`, `realshift.bindings.v1`, `realshift.vehicle.v1`,
+`realshift.runs.v1`, `realshift.custom.v1` — stored in `localStorage` on the current device only.
 
 ## Default controls
 
@@ -176,8 +176,7 @@ Switching designs never touches the simulation; the choice is saved in settings.
 
 ## Transmission validation
 
-`npm run test:physics` exercises the fixed-step simulation for a petrol four,
-diesel and V8 in all three clutch modes, plus manual stall, an unsafe downshift
+`npm run test:physics` exercises the fixed-step simulation for every factory vehicle in all three clutch modes, plus manual stall, an unsafe downshift
 and 180 seconds of numerical operation. These are automated model tests, not
 browser, listening or real-world validation.
 

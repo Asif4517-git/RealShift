@@ -1,3 +1,4 @@
+import { localId } from "./ids";
 import { tyreRadiusM, type Vehicle } from "./vehicles";
 
 export type ClutchMode = "manual" | "assisted" | "auto";
@@ -350,7 +351,7 @@ export class DynoSimulation {
     const p = this.pull;
     if (this.pullSamples.length < 3) return null;
     return {
-      id: `RUN-${String(Math.floor(Math.random() * 900) + 100)}`,
+      id: localId("RUN"),
       vehicleId: this.vehicle.id,
       vehicleSnapshot: structuredClone(this.vehicle),
       label: `${this.vehicle.make} ${this.vehicle.model}`,

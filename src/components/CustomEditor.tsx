@@ -1,3 +1,4 @@
+import { localId } from "../lib/ids";
 import { useState } from 'react';
 import { DEFAULT_CUSTOM, validateCustom, estimateTopSpeed, suggestRatios, type CustomBuild, type CustomSpec } from '../lib/customVehicle';
 import { useStore } from '../lib/store';
@@ -20,7 +21,7 @@ export function CustomEditor() {
     const ratios = ratioText.split(',').map(x => x.trim() === '' ? NaN : Number(x));
     const next = { ...spec, ratios }; const errors = validateCustom(next);
     if (errors.length) { setMessage(errors.join(' ')); return; }
-    const buildId = id ?? `custom-${crypto.randomUUID()}`;
+    const buildId = id ?? localId("custom");
     saveCustom({ id: buildId, spec: next }); setId(buildId); setSpec(next); setMessage('Build saved and selected.');
   };
   return <Panel className="space-y-4 p-4 sm:p-5">
