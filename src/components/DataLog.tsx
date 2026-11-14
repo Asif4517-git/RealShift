@@ -209,7 +209,7 @@ export function DataLog({
                             <td className="px-4 py-2.5 font-mono text-[9.5px] uppercase tracking-[0.05em] text-mut-2">{timeAgo(run.dateISO)}</td>
                             <td className="pr-3">
                               <button
-                                onClick={(event) => { event.stopPropagation(); deleteRun(run.id); if (selectedRun?.id === run.id) setSelectedRunId(null); }}
+                                onClick={(event) => { event.stopPropagation(); if (window.confirm(`Delete saved run ${run.id}? This cannot be undone.`)) { deleteRun(run.id); if (selectedRun?.id === run.id) setSelectedRunId(null); } }}
                                 aria-label={`Delete ${run.id}`}
                                 className="flex h-6 w-6 items-center justify-center rounded text-mut-2 transition-colors hover:bg-danger/10 hover:text-danger"
                               >
