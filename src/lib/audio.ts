@@ -8,6 +8,9 @@ import i4RevB from "../assets/engine/i4b_rev.mp3?inline";
 import s2000High from "../assets/engine/i4hi_hi.mp3?inline";
 import dieselIdle from "../assets/engine/d4s_idle.mp3?inline";
 import dieselRev from "../assets/engine/d4s_rev.mp3?inline";
+import i6Idle from "../assets/engine/i6_idle.mp3?inline";
+import i6TurboRev from "../assets/engine/i6t_rev.mp3?inline";
+import v8Mid from "../assets/engine/v8xbb_rev.mp3?inline";
 import v8Idle from "../assets/engine/v8x57_idle.mp3?inline";
 import v8Rev from "../assets/engine/v8x57_rev.mp3?inline";
 import v8High from "../assets/engine/v8xsc_hi.mp3?inline";
@@ -468,7 +471,7 @@ export class EngineAudio {
   }
 
   setVehicle(vehicle: Vehicle) {
-    const changed = vehicle.id !== this.vehicle.id;
+    const changed = vehicle !== this.vehicle;
     this.vehicle = vehicle;
     this.voice = buildVoice(vehicle);
     if (!changed || !this.ctx) return;
@@ -540,8 +543,10 @@ export class EngineAudio {
       : vehicle.engine.layout.includes("Flat")
         ? [[v6Idle, 651], [flatMid, 3706], [flatHigh, 5193]]
         : voice.cylinders === 8
-          ? [[v8Idle, 805], [v8Rev, 1444], [v8High, 6478]]
-          : voice.cylinders === 6
+          ? [[v8Idle, 805], [v8Rev, 1444], [v8Mid, 2265], [v8High, 6478]]
+          : vehicle.engine.layout.includes("Inline") && voice.cylinders === 6
+            ? [[i6Idle, 757], [i6TurboRev, 3530]]
+            : voice.cylinders === 6
             ? [[v6Idle, 651], [v6Rev, 4111]]
             : [[i4Idle, 877], [i4Rev, 2274], [vehicle.engine.code === "F20C" ? s2000High : i4RevB, vehicle.engine.code === "F20C" ? 7317 : 2529]];
     let buffers: AudioBuffer[];
@@ -556,15 +561,16 @@ export class EngineAudio {
         return buffer;
       }));
     } catch (error) {
-      if (this.ctx !== context || vehicle.id !== this.vehicle.id) { this.rendering = false; return; }
+      if (this.ctx !== context || vehicle !== this.vehicle) { this.rendering = false; if (this.ctx === context) void this.renderModels(); return; }
       console.warn("Recorded engine audio unavailable; using synthetic fallback", error);
       const rate = this.ctx.sampleRate;
       buffers = [voice.idleRpm, voice.redline * 0.46, voice.redline * 0.85]
         .map((rpm) => makeBuffer(this.ctx!, renderEngineLoop(voice, rpm, rate, 1.15)));
       clips.splice(0, clips.length, ["", voice.idleRpm], ["", voice.redline * 0.46], ["", voice.redline * 0.85]);
     }
-    if (this.ctx !== context || vehicle.id !== this.vehicle.id) {
+    if (this.ctx !== context || vehicle !== this.vehicle) {
       this.rendering = false;
+      if (this.ctx === context) void this.renderModels();
       return;
     }
     this.stopBandSources();

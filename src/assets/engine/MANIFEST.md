@@ -40,3 +40,15 @@ The original asset pages and licence notices were checked on 2026-11-13.
 * Sonniss's engine, idle and rev catalogues were reviewed. Their commercial
   libraries require acquisition; the free GDC bundle's [v2 licence](https://sonniss.com/gdc-bundle-license/)
   restricts distribution of sounds as sounds. No Sonniss assets are included.
+
+## Additional loops
+
+The following edited loops were obtained from [350Chev at 022cc9d](https://github.com/Jxstrr0/350Chev/tree/022cc9db447990dd94f0f02fbc8e905396e27e95/sounds); processing and anchor RPMs are described in its credits as above. The original licence notices were checked individually.
+
+| Asset | Original recording / author | Licence | Approximate anchor |
+|---|---|---|---|
+| i6_idle.mp3 | [1988 BMW 320](https://freesound.org/people/ninebilly/sounds/173005/), ninebilly | CC0 1.0 | 757 rpm, inline-six |
+| i6t_rev.mp3 | [Toyota Supra dyno](https://freesound.org/people/editboy23/sounds/496171/), editboy23 | CC0 1.0 | 3530 rpm, turbo inline-six |
+| v8xbb_rev.mp3 | [Ford 460 V8](https://freesound.org/people/Henaway/sounds/127980/), Henaway | CC0 1.0 | 2265 rpm, V8 |
+
+Inline-six custom builds use the BMW/Supra bank as an approximation; the Supra recording is not necessarily representative of other inline-six engines. The V8 rev loop fills an intermediate band; it does not make the Mustang recording vehicle-specific. There are still no independently recorded load, release or shutdown bands for these vehicles.
