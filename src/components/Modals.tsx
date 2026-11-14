@@ -72,6 +72,8 @@ export function SettingsModal({
 
   const markSaved = () => setSaved(true);
   const audio = settings.audio;
+  const recommendedGraphics: GraphicsQuality = typeof navigator !== "undefined" && navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 4 ? "performance" : "balanced";
+  const recommendedCluster = vehicle.engine.fuel === "Diesel" ? "classic" : "sport";
 
   return (
     <Modal
@@ -181,6 +183,7 @@ export function SettingsModal({
             <p className="mt-1">Suggested roller load {Math.round(Math.min(45, Math.max(18, 18 + vehicle.engine.torqueNm / 35)))}% for this engine's torque, with assisted clutch for repeatable pulls. This is a simulation starting point, not a dyno calibration.</p>
             <p>Current: {settings.dynoLoad}% · {settings.clutchMode} clutch.</p>
             <Button variant="outline" size="sm" className="mt-2" onClick={() => { updateSettings({ dynoLoad: Math.round(Math.min(45, Math.max(18, 18 + vehicle.engine.torqueNm / 35))), clutchMode: "assisted" }); markSaved(); }}>Apply recommendation</Button>
+            <Button variant="ghost" size="sm" className="mt-2" onClick={() => { updateSettings({ dynoLoad: DEFAULT_SETTINGS.dynoLoad, clutchMode: DEFAULT_SETTINGS.clutchMode }); markSaved(); }}>Restore simulation defaults</Button>
           </div>
           <div>
             <p className="label-xs mb-1.5">Clutch behaviour</p>
@@ -228,6 +231,13 @@ export function SettingsModal({
 
       {tab === "display" && (
         <div className="space-y-4">
+          <div className="rounded-lg border border-accent/20 bg-accent/[0.04] p-3 text-[11.5px] text-mut">
+            <p className="label-xs text-accent">Recommended display starting point</p>
+            <p className="mt-1">Graphics: {recommendedGraphics}; cluster: {recommendedCluster}. Graphics suggestion uses available CPU thread count as a rough device hint, not a benchmark. The cluster suggestion favours a classic display for diesel and sport otherwise.</p>
+            <p>Current: {settings.graphics} graphics · {settings.cluster} cluster.</p>
+            <Button variant="outline" size="sm" className="mt-2" onClick={() => { updateSettings({ graphics: recommendedGraphics, cluster: recommendedCluster }); markSaved(); }}>Apply recommendation</Button>
+            <Button variant="ghost" size="sm" className="mt-2" onClick={() => { updateSettings({ graphics: DEFAULT_SETTINGS.graphics, cluster: DEFAULT_SETTINGS.cluster }); markSaved(); }}>Restore display defaults</Button>
+          </div>
           <div>
             <p className="label-xs mb-1.5">Measurement units</p>
             <Segmented
