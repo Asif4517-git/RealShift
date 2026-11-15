@@ -1,3 +1,4 @@
+import { roadLoadN } from "./roadLoad";
 import { localId } from "./ids";
 import { tyreRadiusM, type Vehicle } from "./vehicles";
 
@@ -491,8 +492,7 @@ export class DynoSimulation {
     const fade = 1 - clamp(this.clutchHeat / 140, 0, 0.38);
     const wheelInertia = (v.chassis.weightKg + 1250) * r * r + 9 + (gearbox.drivetrain === "4WD" ? 4 : 0);
     const oldWheel = this.wheelOmega;
-    const resistForce = v.chassis.weightKg * 9.81 * 0.014
-      + 0.5 * 1.2 * 2.2 * (v.chassis.widthMm / 1000) * Math.pow(this.wheelOmega * r, 2)
+    const resistForce = roadLoadN(v.chassis.weightKg, v.chassis.widthMm, v.chassis.heightMm, this.wheelOmega * r)
       + this.dynoLoad * 7.2 + this.brake * 14500;
     const resistTorque = sign(this.wheelOmega) * resistForce * r;
     let engineOmega = this.rpm * (2 * Math.PI / 60);

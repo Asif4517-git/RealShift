@@ -1,3 +1,5 @@
+import { crossfadeLoop } from '../src/lib/audioLoop';
+import { roadLoadN } from '../src/lib/roadLoad';
 import { strict as assert } from 'node:assert';
 import { DynoSimulation, type ClutchMode } from '../src/lib/physics';
 import { VEHICLES } from '../src/lib/vehicles';
@@ -76,3 +78,11 @@ console.log('All vehicle clutch-isolation and assisted downshift checks passed.'
   const state = sim.snapshot(); assert(state.throttle > 0.5); assert.equal(state.effectiveThrottle, 0);
 }
 console.log('Assisted shift torque cut is exposed to audio.');
+
+// A loop with a discontinuous endpoint must wrap continuously after overlap.
+{
+  const raw = Float32Array.from({length:4800}, (_,i) => i / 4800);
+  const loop = crossfadeLoop(raw,48000);
+  assert(Math.abs(loop[0]-loop[loop.length-1]) < 0.001);
+  assert(roadLoadN(1400,1800,1450, 30) < 650);
+}

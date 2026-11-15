@@ -1,3 +1,4 @@
+import { roadLoadN } from './roadLoad';
 import { recordedFamily } from './audioFamilies';
 import { VEHICLES, type Vehicle, type SoundCharacter } from './vehicles';
 
@@ -33,7 +34,7 @@ export function validateCustom(s: CustomSpec): string[] {
   range('Flywheel inertia', s.flywheelInertia, 0.05, 1); range('Mass', s.weightKg, 400, 5000);
   range('Reverse ratio', s.reverse, 0.3, 8); range('Final drive', s.finalDrive, 1, 8);
   range('Clutch capacity', s.clutchCapacityNm, 50, 3000); range('Target top speed', s.targetTopSpeed, 50, 500);
-  if (!Array.isArray(s.ratios) || s.ratios.length < 1 || s.ratios.length > 8 || s.ratios.some(r => !Number.isFinite(r) || r < 0.2 || r > 8)) errors.push('Enter 1–8 forward ratios between 0.2 and 8.');
+  if (!Array.isArray(s.ratios) || s.ratios.length < 1 || s.ratios.length > 12 || s.ratios.some(r => !Number.isFinite(r) || r < 0.2 || r > 8)) errors.push('Enter 1–12 forward ratios between 0.2 and 8.');
   else if (s.ratios.some((r, i) => i > 0 && r >= s.ratios[i - 1])) errors.push('Forward ratios must decrease from first gear.');
   const match = /^(\d{3})\/(\d{2})R(\d{2})$/i.exec(s.tyre.trim());
   if (!match || +match[1] < 100 || +match[1] > 400 || +match[2] < 20 || +match[2] > 90 || +match[3] < 12 || +match[3] > 24) errors.push('Tyre must be in the format 225/45R18, with realistic dimensions.');
@@ -86,7 +87,7 @@ export function estimateTopSpeed(s: CustomSpec): number {
   let best = 0;
   for (let kph = 1; kph <= 500; kph += 0.5) {
     const speed = kph / 3.6;
-    const resistance = s.weightKg*9.81*0.014 + 0.5*1.2*2.2*(v.chassis.widthMm/1000)*speed*speed;
+    const resistance = roadLoadN(s.weightKg, v.chassis.widthMm, v.chassis.heightMm, speed);
     const canMaintain = s.ratios.some(gear => {
       const overall=gear*s.finalDrive, rpm=speed/radius*overall*60/(2*Math.PI);
       if (rpm < s.idleRpm || rpm > s.redline) return false;
@@ -100,7 +101,7 @@ export function estimateTopSpeed(s: CustomSpec): number {
 
 /** Geometric ratios with the requested target at redline in top gear. */
 export function suggestRatios(s: CustomSpec, count: number): number[] {
-  if (!Number.isInteger(count) || count < 1 || count > 8 || !Number.isFinite(s.targetTopSpeed) || s.targetTopSpeed <= 0 || !Number.isFinite(s.finalDrive) || s.finalDrive <= 0) return [];
+  if (!Number.isInteger(count) || count < 1 || count > 12 || !Number.isFinite(s.targetTopSpeed) || s.targetTopSpeed <= 0 || !Number.isFinite(s.finalDrive) || s.finalDrive <= 0) return [];
   const m = /^(\d{3})\/(\d{2})R(\d{2})$/i.exec(s.tyre.trim());
   if (!m) return [];
   const radius=+m[3]*0.0254/2+(+m[1]/1000)*(+m[2]/100);
@@ -109,4 +110,40 @@ export function suggestRatios(s: CustomSpec, count: number): number[] {
   if (count === 1) return [Number(top.toFixed(3))];
   const first=Math.max(3.5,top*1.1);
   return Array.from({length:count},(_,i)=>Number((first*Math.pow(top/first,i/(count-1))).toFixed(3)));
+}
+
+/** Fictional high-performance build; all specifications are design estimates. */
+export const GOD_CAR: CustomSpec = {
+  ...DEFAULT_CUSTOM, name: 'God Car', layout: 'V', cylinders: 8, displacementCc: 6200,
+  turbo: true, powerHp: 1200, torqueNm: 1400, idleRpm: 900, redline: 8500, limiter: 8700,
+  flywheelInertia: 0.3, ratios: [3.6, 3.12, 2.7, 2.34, 2.03, 1.76, 1.53, 1.32, 1.14, 0.99, 0.86, 0.74],
+  reverse: 3.5, finalDrive: 3.3, clutchCapacityNm: 2000, drivetrain: '4WD', weightKg: 1600,
+  tyre: '305/35R20', targetTopSpeed: 400,
+};
+
+/** Randomized, internally valid design targets, not claimed real-world vehicle specs. */
+export function randomCustom(random: () => number = Math.random): CustomSpec {
+  const pick = <T,>(items: readonly T[]) => items[Math.floor(random() * items.length)];
+  const integer = (min: number, max: number) => min + Math.floor(random() * (max - min + 1));
+  const engines = [
+    { fuel:'Petrol', layout:'Inline', cylinders:3, displacementCc:1000, torqueNm:180, redline:6500, turbo:true },
+    { fuel:'Petrol', layout:'Inline', cylinders:4, displacementCc:2000, torqueNm:280, redline:7000, turbo:true },
+    { fuel:'Diesel', layout:'Inline', cylinders:4, displacementCc:2800, torqueNm:460, redline:4500, turbo:true },
+    { fuel:'Petrol', layout:'Inline', cylinders:6, displacementCc:3000, torqueNm:480, redline:7000, turbo:true },
+    { fuel:'Petrol', layout:'V', cylinders:8, displacementCc:5000, torqueNm:570, redline:7500, turbo:false },
+  ] as const;
+  const engine = pick(engines);
+  const torqueNm = Math.round(engine.torqueNm * integer(80,120) / 100);
+  const redline = engine.redline + integer(-3,3) * 100;
+  // Peak-power torque stays below peak torque at the chosen power RPM.
+  const powerHp = Math.round(torqueNm * (redline * 0.9 * Math.PI / 30) / 745.7 * integer(70,90) / 100);
+  const gears = integer(5,8); const top = integer(65,95) / 100;
+  const ratios = Array.from({length:gears}, (_,i) => Number((3.7 * Math.pow(top/3.7, i/(gears-1))).toFixed(3)));
+  return { ...DEFAULT_CUSTOM, ...engine, name: `Random ${engine.fuel} ${engine.layout}-${engine.cylinders}`, torqueNm, redline,
+    powerHp, limiter:redline+200, idleRpm:engine.fuel === 'Diesel' ? 800 : 850, ratios,
+    flywheelInertia: engine.fuel === 'Diesel' ? 0.35 : engine.cylinders >= 6 ? 0.26 : 0.18,
+    finalDrive: integer(30,45)/10, clutchCapacityNm: Math.ceil(torqueNm * 1.5),
+    drivetrain:pick(['FWD','RWD','4WD'] as const), weightKg:integer(1000,2200),
+    tyre:pick(['205/55R16','225/45R18','245/40R19','265/50R18'] as const), targetTopSpeed:integer(180,300),
+  };
 }
