@@ -493,7 +493,10 @@ export class DynoSimulation {
       // Manual mode gets no such aid and can stall like a real car.
       if (this.clutchMode !== "manual" && this.gear !== 0 && this.clutchActual < 0.9 && this.rpm < eng.idleRpm * 1.5) {
         const reserve = this.vehicle.engine.torqueCurve.reduce((max, point) => Math.max(max, point.nm), 0) * 0.34;
-        grossTorque += reserve * smooth((eng.idleRpm * 1.55 - this.rpm) / (eng.idleRpm * 0.75));
+        const request = reserve * smooth((eng.idleRpm * 1.55 - this.rpm) / (eng.idleRpm * 0.75));
+        // Idle assistance can request unused engine torque, not create torque
+        // beyond the full-load curve when the driver is already at full throttle.
+        grossTorque += Math.min(request, Math.max(0, this.torqueAt(this.rpm) + friction - grossTorque));
       }
       // Rev limiter: fuel cut with hysteresis
       if (this.rpm >= eng.limiter && this.fuelCutTimer <= 0 && this.fuelCutTimer > -999) {

@@ -158,3 +158,16 @@ for (const v of vehicles) for (const mode of ['manual','assisted','auto'] as con
  }
 }
 console.log('Every adjacent forward gear engages across factory and sample custom vehicles in all modes.');
+
+// Anti-stall control may request spare torque, but cannot exceed the
+// full-load crank torque curve at low RPM when already at full throttle.
+for (const v of vehicles) for(const mode of ['assisted','auto'] as const) {
+ const s=new DynoSimulation(v);s.setClutchMode(mode);s.engineOn=true;s.gear=1;s.rpm=v.engine.idleRpm;
+ s.throttle=1;s.throttleTarget=1;
+ const points=v.engine.torqueCurve; let available=points[0].nm;
+ for(let i=1;i<points.length && v.engine.idleRpm>points[0].rpm;i++) {
+   if(v.engine.idleRpm<=points[i].rpm) {const a=points[i-1],b=points[i],t=(v.engine.idleRpm-a.rpm)/(b.rpm-a.rpm);available=a.nm+(b.nm-a.nm)*t*t*(3-2*t);break;}
+ }
+ s.tick(dt);
+ assert(s.engineTorque<=available+1e-7,`${v.id} ${mode}: anti-stall exceeded full-load torque`);
+}
