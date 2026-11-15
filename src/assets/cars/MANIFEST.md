@@ -21,3 +21,5 @@ Additional representative same-generation photographs (trim may differ). Each is
 * `mx5-nd.jpg`: [2015 Mazda MX-5 ND 2.0](https://commons.wikimedia.org/wiki/File:2015_Mazda_MX-5_ND_2.0_SKYACTIV-G_160_i-ELOOP_Rubinrot-Metallic_Vorderansicht.jpg), Kickaffe (Mario von Berg), [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/). Earlier ND, representative of the 2020 ND2.
 
 These three copies are resized; the interface crops them to fit. They remain under their respective licences.
+
+* `porsche-9912.jpg`: [2018 Porsche 911 Carrera S](https://commons.wikimedia.org/wiki/File:2018_Porsche_911_Carrera_S.jpg), TTTNIS, [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/). Resized and cropped; representative of the 2016 991.2, transmission not established.
