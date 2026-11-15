@@ -847,7 +847,7 @@ export const VEHICLES: Vehicle[] = [
       tyre: "275/40R19",
       wheelDiameterIn: 19,
     },
-    dyno: { peakPowerHp: 435, measuredWheelHp: 372, driveLoss: 0.15, note: "2017 model figures. Use 4th gear (1:1) for the cleanest roller measurement." },
+    dyno: { peakPowerHp: 435, measuredWheelHp: 372, driveLoss: 0.15, note: "2017 model figures. Fifth gear is 1:1 in this MT-82 ratio set; simulated losses and wheel power are estimates." },
     sound: {
       character: "na-petrol-v8",
       label: "Coyote V8",
@@ -863,6 +863,7 @@ export const VEHICLES: Vehicle[] = [
     verified: ["4951 cc Coyote V8", "435 hp @ 6500 rpm", "542 Nm @ 4250 rpm", "6-speed manual"],
     estimated: ["MT-82 ratio set", "Flywheel inertia", "Drivetrain loss"],
     sources: [
+      { label: "MT-82 transmission ratios (aftermarket reference)", url: "https://www.bearingkits.co.uk/FORD-GEARBOX-PARTS/FORD-MUSTANG-6-SPEED-MT82-GEARBOX-PARTS/C1-101-1-0.htm" },
       { label: "Ford — Mustang", url: "https://www.ford.com/cars/mustang/" },
       { label: "Wikipedia — Ford Mustang (S550)", url: "https://en.wikipedia.org/wiki/Ford_Mustang_(S550)" },
     ],

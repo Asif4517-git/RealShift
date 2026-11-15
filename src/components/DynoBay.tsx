@@ -27,6 +27,7 @@ import {
 import { useDyno } from "../hooks/useDyno";
 import { nf, powerKw, speedUnit, speedValue, tempUnit, tempValue, torqueUnit, torqueValue, timeAgo } from "../lib/format";
 import { useStore, keyLabel } from "../lib/store";
+import { auditVehicle } from "../lib/vehicleValidation";
 import { tyreRadiusM, ENGINE_TYPE_SHORT } from "../lib/vehicles";
 import type { AppView } from "../lib/views";
 import { cn } from "../utils/cn";
@@ -50,8 +51,10 @@ export function DynoBay({ onNavigate, onOpenControls, onOpenSettings, onOpenAudi
   const camera = settings.camera;
   const [cameraNonce, setCameraNonce] = useState(0);
   const [showTorque, setShowTorque] = useState(true);
+  const [diagnosticTrace, setDiagnosticTrace] = useState<{speed: number; rpm: number}[]>([]);
   const [flash, setFlash] = useState<string | null>(null);
   const units = settings.units;
+  const vehicleAudit = useMemo(() => auditVehicle(vehicle), [vehicle]);
 
   useEffect(() => { dyno.setAudioCamera(camera); }, [camera, dyno.setAudioCamera]);
 
@@ -62,6 +65,11 @@ export function DynoBay({ onNavigate, onOpenControls, onOpenSettings, onOpenAudi
   }, [flash]);
 
   const clutchState = snap.clutch > 0.92 ? "OPEN" : snap.clutch > 0.35 || snap.clutchSlipRpm > 80 ? "SLIP" : "ENGAGED";
+  useEffect(() => { setDiagnosticTrace([]); }, [vehicle.id]);
+  useEffect(() => {
+    if (snap.engineOn) setDiagnosticTrace(points => [...points, { speed: snap.speedKph, rpm: snap.rpm }].slice(-120));
+  }, [snap]);
+
   const engineState = snap.starting ? "CRANKING" : snap.engineOn ? "RUNNING" : snap.stalled ? "STALLED" : "OFF";
   const currentRatio = snap.gear === 0 ? 0 : snap.gear === -1 ? vehicle.gearbox.reverse : vehicle.gearbox.ratios[snap.gear - 1];
   const totalRatio = Math.abs(currentRatio * vehicle.gearbox.finalDrive);
@@ -399,9 +407,21 @@ export function DynoBay({ onNavigate, onOpenControls, onOpenSettings, onOpenAudi
               <details className="mt-3 rounded-lg border border-line-soft bg-black/20 p-2.5">
                 <summary className="cursor-pointer label-xs">Powertrain diagnostics</summary>
                 <div className="mt-2 space-y-1 font-mono text-[10px] text-mut">
-                  <div>Engine {nf(snap.rpm)} rpm · Input {nf(snap.gearboxInputRpm)} rpm · Wheel {nf(snap.rollerRpm)} rpm</div>
-                  <div>Clutch slip {nf(snap.clutchSlipRpm)} rpm · Clutch torque {nf(snap.clutchTorqueNm)} Nm</div>
-                  <div>Engine net {nf(snap.engineTorqueNm)} Nm · Effective throttle {nf(snap.effectiveThrottle * 100)}% · Audio {dyno.audioReady ? "ready" : "not ready"}</div>
+                  <div>Gear {snap.gearLabel} · Gear ratio {snap.gear === 0 ? "—" : nf(currentRatio, 3)} · Final {nf(vehicle.gearbox.finalDrive, 3)}</div>
+                  <div>Engine {nf(snap.rpm)} rpm · Input {snap.gear === 0 ? "not modelled in neutral" : `${nf(snap.gearboxInputRpm)} rpm`}</div>
+                  <div>Wheel {nf(snap.wheelRpm)} rpm · Roller {nf(snap.rollerRpm)} rpm · {nf(speedValue(snap.speedKph, units), 1)} {speedUnit(units)} equivalent</div>
+                  <div>Clutch pedal {nf(snap.clutch * 100)}% · Slip {snap.gear === 0 ? "—" : `${nf(snap.clutchSlipRpm)} rpm`} · Torque {nf(snap.clutchTorqueNm)} Nm</div>
+                  <div>Engine net {nf(snap.engineTorqueNm)} Nm · Wheel {nf(snap.wheelTorqueNm)} Nm · Wheel power {nf(snap.wheelPowerHp, 1)} hp</div>
+                  <div>Dyno load {nf(snap.dynoLoadPct)}% · {nf(snap.resistForceN)} N · Effective throttle {nf(snap.effectiveThrottle * 100)}%</div>
+                  {vehicleAudit.errors.map(warning => <div key={warning} className="text-danger">Configuration error: {warning}</div>)}
+                  {vehicleAudit.warnings.map(warning => <div key={warning} className="text-warm">Review: {warning}</div>)}
+                  {snap.gear > 0 && <div>Ideal at 4,000 rpm in gear {snap.gear}: {nf(speedValue(vehicleAudit.speeds[snap.gear-1]?.at4000 ?? 0, units), 1)} {speedUnit(units)} (no slip; not a speed target)</div>}
+                  <p className="pt-1 text-mut-2">Recent engine RPM versus equivalent speed · {speedUnit(units)} horizontally</p>
+                  <svg className="h-24 w-full rounded border border-line-soft" viewBox="0 0 300 90" role="img" aria-label="Recent engine RPM versus equivalent road speed" preserveAspectRatio="none">
+                    <line x1="0" y1="89" x2="300" y2="89" stroke="#4b594b" />
+                    <polyline fill="none" stroke="#cbf466" strokeWidth="2" points={diagnosticTrace.map(point => `${Math.min(300, speedValue(point.speed, units) / (units === "metric" ? 300 : 186) * 300)},${Math.max(0, 89 - point.rpm / Math.max(1, snap.limiterRpm) * 89)}`).join(' ')} />
+                  </svg>
+                  <div className="flex justify-between text-[9px]"><span>0 {speedUnit(units)}</span><span>{units === "metric" ? 300 : 186} {speedUnit(units)} · vertical: 0–{nf(snap.limiterRpm)} rpm</span></div>
                 </div>
               </details>
               <div className="mt-3 grid grid-cols-5 gap-1.5">

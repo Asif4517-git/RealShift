@@ -1007,7 +1007,7 @@ export class EngineAudio {
     this.set(this.tyreFilter.frequency, 1100 + speed * 2600, 0.15);
     this.set(this.rollerHum.frequency, 10 + state.rollerRpm * 0.55, 0.12);
     this.set(this.rollerHumGain.gain, speed * 0.06, 0.15);
-    this.set(this.gearWhine.frequency, 180 + state.rollerRpm * 4.2, 0.15);
+    this.set(this.gearWhine.frequency, 180 + state.wheelRpm * 4.2, 0.15);
     this.set(this.gearWhineGain.gain, speed * 0.003 * (state.gear === 0 ? 0.2 : 1), 0.15);
     this.set(this.reverbGain.gain, this.volumes.ambience * (this.camera === "cockpit" || this.camera === "cluster" ? 0.25 : 1.2), 0.2);
     if (!state.engineOn) this.set(this.turboGain.gain, 0, 0.3);
