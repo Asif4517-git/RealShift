@@ -33,7 +33,7 @@ site is available at `https://asif4517-git.github.io/RealShift/`.
 
 | Area | Implementation |
 | --- | --- |
-| Vehicle database | 17 real production models across petrol inline-three, inline-four, inline-six, V6, V8, flat-six and diesel configurations, plus user-defined custom vehicles |
+| Vehicle database | 17 real production models across petrol inline-three, inline-four, inline-six, V6, V8, flat-six and diesel configurations, plus user-defined custom vehicles with random specs and a fictional 12-speed God Car preset |
 | Engine | Torque-anchor curve interpolation, flywheel inertia, friction/pumping losses, idle governor, boost lag, fuel-cut rev limiter, coolant/oil/fuel/battery state |
 | Clutch | Nonlinear clamp/bite curve, friction capacity, slip coupling, heat build-up with friction fade, manual/assisted/bypass modes, anti-stall reserve, stall behaviour and gearbox input-shaft speed |
 | Gearbox | Individual ratios and final drive per vehicle, reverse and neutral, sequential and direct selection |
@@ -96,7 +96,7 @@ recordings are approximations, not the selected vehicle. The S2000 high band
 uses an F20C recording. The library does not yet contain a full matched
 idle/acceleration/overrun/start/stop bank for each vehicle; gain/EQ and
 playback-rate changes approximate missing conditions, and auxiliary effects
-and the decode-error fallback are synthetic. Listening validation remains
+and the decode-error fallback are synthetic. Recorded and synthesized loops use a short seam crossfade to reduce periodic loop-boundary clicks; this does not eliminate genuine limiter cuts or guarantee artefact-free sound on every device. Listening validation remains
 necessary; no claim of complete realism is made.
 
 Clutch torque is limited by capacity and calculated from the relative angular
@@ -217,7 +217,7 @@ directory before launching its Chromium binary.
 
 Custom builds are user estimates. The displayed road-speed estimate assumes
 steady full load, flat road, no dyno resistance and the simulation's simplified
-aerodynamics; it is neither a guarantee nor a speed cap. Audio uses the nearest
+aerodynamics (generic drag coefficient and estimated frontal area); it is neither a guarantee nor a speed cap. Random designs and God Car are fictional; their engine sound is a dynamic family approximation, not a model-specific recording. Audio uses the nearest
 available recording family and many load/transition states remain unrecorded.
 Thirteen garage photographs are currently provided; they show representative
 trims and their licences and attribution are in `src/assets/cars/MANIFEST.md`.

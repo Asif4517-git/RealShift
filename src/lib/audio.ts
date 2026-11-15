@@ -1,3 +1,4 @@
+import { prepareLoop } from "./audioLoop";
 // REALSHIFT audio: locally bundled, licensed engine recordings, blended by
 // simulated RPM. A procedural fallback is used only when decoding fails.
 // Sources, approximations, and missing load bands: src/assets/engine/MANIFEST.md.
@@ -568,7 +569,7 @@ export class EngineAudio {
         if (cached) return cached;
         const response = await fetch(url);
         if (!response.ok) throw new Error(`Audio sample: ${response.status}`);
-        const buffer = await context.decodeAudioData(await response.arrayBuffer());
+        const buffer = prepareLoop(context, await context.decodeAudioData(await response.arrayBuffer()));
         if (this.ctx === context) this.decoded.set(url, buffer);
         return buffer;
       }));
@@ -593,7 +594,7 @@ export class EngineAudio {
       console.warn("Recorded engine audio unavailable; using synthetic fallback", error);
       const rate = this.ctx.sampleRate;
       buffers = [voice.idleRpm, voice.redline * 0.46, voice.redline * 0.85]
-        .map((rpm) => makeBuffer(this.ctx!, renderEngineLoop(voice, rpm, rate, 1.15)));
+        .map((rpm) => prepareLoop(context, makeBuffer(context, renderEngineLoop(voice, rpm, rate, 1.15))));
       clips.splice(0, clips.length, ["", voice.idleRpm], ["", voice.redline * 0.46], ["", voice.redline * 0.85]);
     }
     if (this.ctx !== context || vehicle !== this.vehicle) {
@@ -647,7 +648,7 @@ export class EngineAudio {
     const Ctor = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
     this.ctx = new Ctor({ latencyHint: "interactive" });
     const ctx = this.ctx;
-    this.noiseBuffer = makeNoise(ctx, 3.2);
+    this.noiseBuffer = prepareLoop(ctx, makeNoise(ctx, 3.2));
 
     this.master = ctx.createGain();
     this.master.gain.value = 0;

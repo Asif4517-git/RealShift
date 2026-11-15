@@ -1,5 +1,5 @@
 import { strict as assert } from 'node:assert';
-import { DEFAULT_CUSTOM, customVehicle, validateCustom, estimateTopSpeed, suggestRatios } from '../src/lib/customVehicle';
+import { DEFAULT_CUSTOM, GOD_CAR, randomCustom, customVehicle, validateCustom, estimateTopSpeed, suggestRatios } from '../src/lib/customVehicle';
 import { localId } from '../src/lib/ids';
 import { tyreRadiusM } from '../src/lib/vehicles';
 import { recordedFamily } from '../src/lib/audioFamilies';
@@ -14,7 +14,21 @@ assert.equal(recordedFamily('V-12',12,false),null);
 assert.equal(recordedFamily('Flat-4',4,false),null);
 assert.equal(recordedFamily('V-8',8,true),null);
 assert.equal(customVehicle({id:'custom-v12',spec:{...DEFAULT_CUSTOM,layout:'V',cylinders:12}}).sound.character,'custom-synth');
-assert(estimateTopSpeed(DEFAULT_CUSTOM) > 50);
+assert(estimateTopSpeed(DEFAULT_CUSTOM) > 180, 'road load should not use an unrealistically high drag area');
+assert.deepEqual(validateCustom(GOD_CAR), []);
+assert.equal(suggestRatios(GOD_CAR, 12).length, 12);
+for (let i=0;i<1000;i++) { const build=randomCustom(); assert.deepEqual(validateCustom(build), [], `random build ${i}`); assert(estimateTopSpeed(build)>0); }
+for (const mode of ['manual','assisted','auto'] as const) {
+  const god = new DynoSimulation(customVehicle({id:'custom-god-test',spec:GOD_CAR})); god.setClutchMode(mode); god.startEngine();
+  for(let i=0;i<480;i++) god.tick(1/120);
+  if (mode==='manual') { god.setInputs({clutch:1}); for(let i=0;i<60;i++) god.tick(1/120); }
+  for(let gear=1;gear<=12;gear++) { god.selectGear(gear); assert.equal(god.gear,gear,`${mode} gear ${gear}`); for(let i=0;i<10;i++) god.tick(1/120); }
+  assert(Number.isFinite(god.rpm));
+  god.selectGear(1); god.setInputs({throttle:0.8});
+  if (mode==='manual') { god.setInputs({clutch:0.65}); for(let i=0;i<240;i++) god.tick(1/120); }
+  god.setInputs({clutch:0}); for(let i=0;i<1200;i++) god.tick(1/120);
+  assert(god.wheelOmega > 0 && Number.isFinite(god.rpm), `${mode} God Car launch`);
+}
 assert.equal(suggestRatios(DEFAULT_CUSTOM, 6).length, 6);
 assert.deepEqual(suggestRatios(DEFAULT_CUSTOM, 0), []);
 assert(validateCustom({ ...DEFAULT_CUSTOM, ratios: [1,2] }).length);
