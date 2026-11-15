@@ -1,3 +1,4 @@
+import { ROLLER_RADIUS_M } from "./dynoGeometry";
 import { roadLoadN } from "./roadLoad";
 import { localId } from "./ids";
 import { tyreRadiusM, type Vehicle } from "./vehicles";
@@ -69,6 +70,7 @@ export interface SimSnapshot {
   limiterRpm: number;
   speedKph: number;
   rollerRpm: number;
+  wheelRpm: number;
   gear: number;
   gearLabel: string;
   clutch: number;
@@ -141,6 +143,7 @@ export class DynoSimulation {
   steer = 0;
   autoClutchTimer = 0;
   shiftRevMatchRpm = 0;
+  shiftInProgress = false;
   startTimer = 0;
   stallTimer = 0;
   boost = 0;
@@ -222,6 +225,7 @@ export class DynoSimulation {
     this.inputShaftRpm = 0;
     this.autoClutchTimer = 0;
     this.shiftRevMatchRpm = 0;
+    this.shiftInProgress = false;
     this.startTimer = 0;
     this.events = [];
   }
@@ -229,6 +233,7 @@ export class DynoSimulation {
   setClutchMode(mode: ClutchMode) {
     if (this.clutchMode === mode) return;
     this.clutchMode = mode;
+    if (mode === "manual") { this.shiftInProgress = false; this.autoClutchTimer = 0; this.shiftRevMatchRpm = 0; }
 
   }
 
@@ -252,8 +257,9 @@ export class DynoSimulation {
   private totalRatio() {
     const g = this.vehicle.gearbox;
     if (this.gear === 0) return 0;
-    if (this.gear === -1) return -g.reverse * g.finalDrive;
-    return g.ratios[this.gear - 1] * g.finalDrive;
+    const final = g.finalDrive * (g.primaryReduction ?? 1);
+    if (this.gear === -1) return -g.reverse * final;
+    return g.ratios[this.gear - 1] * final;
   }
 
   startEngine() {
@@ -313,10 +319,14 @@ export class DynoSimulation {
       this.emit("gear-reject");
       return;
     }
-    const ratio = target === -1 ? -this.vehicle.gearbox.reverse * this.vehicle.gearbox.finalDrive
-      : target === 0 ? 0 : this.vehicle.gearbox.ratios[target - 1] * this.vehicle.gearbox.finalDrive;
+    const g = this.vehicle.gearbox;
+    const final = g.finalDrive * (g.primaryReduction ?? 1);
+    const ratio = target === -1 ? -g.reverse * final
+      : target === 0 ? 0 : g.ratios[target - 1] * final;
     const inputRpm = this.wheelOmega * ratio * 60 / (2 * Math.PI);
-    if (inputRpm > this.vehicle.engine.limiter * 1.05) {
+    // A driven shaft turning backwards cannot be synchronised to a running
+    // engine, regardless of how small its signed RPM appears.
+    if (inputRpm < -100 || inputRpm > this.vehicle.engine.limiter * 1.05) {
       this.emit("overrev-reject");
       return;
     }
@@ -325,6 +335,7 @@ export class DynoSimulation {
     if (this.clutchMode !== "manual") {
       this.clutchActual = 1;
       this.autoClutchTimer = 0.32;
+      this.shiftInProgress = true;
       this.shiftRevMatchRpm = previous > 0 && target > 0 && target < previous
         ? Math.min(inputRpm, this.vehicle.engine.limiter - 150) : 0;
     }
@@ -407,6 +418,13 @@ export class DynoSimulation {
     const clutchRate = this.clutchMode === "auto" ? 3 : 4.2;
     this.clutchActual += clamp(clutchTarget - this.clutchActual, -clutchRate * dt, clutchRate * dt);
     this.clutchActual = clamp(this.clutchActual, 0, 1);
+    // An assisted shift is not complete until the actuator has reconnected.
+    // Otherwise full held throttle is restored while the clutch is still open,
+    // causing a free-rev spike and unnecessary slip on every upshift.
+    if (this.shiftInProgress && this.autoClutchTimer <= 0 && (this.clutchActual <= 0.2 || this.clutchPedal > 0.2)) {
+      this.shiftInProgress = false;
+      this.shiftRevMatchRpm = 0;
+    }
 
     // Startup sequence
     if (this.starting) {
@@ -426,7 +444,7 @@ export class DynoSimulation {
     // The actuator represents torque interruption or a rev-match blip during
     // assisted shifts. Expose this same state to the audio mixer.
     this.effectiveThrottle = this.engineOn
-      ? (this.autoClutchTimer > 0 ? clamp((this.shiftRevMatchRpm - this.rpm) / 900, 0, 0.65) : this.throttle)
+      ? (this.shiftInProgress ? clamp((this.shiftRevMatchRpm - this.rpm) / 900, 0, 0.65) : this.throttle)
       : 0;
 
     // Air charge
@@ -517,31 +535,22 @@ export class DynoSimulation {
     }
     this.clutchTorque = clutchTorque;
     engineOmega = Math.max(0, engineOmega + (engineNet - clutchTorque) / eng.flywheelInertia * dt);
-    this.rpm = clamp(engineOmega * 60 / (2 * Math.PI), 0, eng.limiter + 220);
+    // Fuel cut limits powered revs, but cannot prevent a mechanical over-rev.
+    this.rpm = engineOmega * 60 / (2 * Math.PI);
     const drivenTorque = clutchTorque * ratio * gearbox.efficiency;
     this.wheelOmega += (drivenTorque - resistTorque) / wheelInertia * dt;
     // Static resistance cannot reverse a stopped roller on its own.
     if (oldWheel !== 0 && sign(oldWheel) !== sign(this.wheelOmega) && Math.abs(drivenTorque) < resistForce * r) this.wheelOmega = 0;
     if (oldWheel === 0 && Math.abs(drivenTorque) < resistForce * r) this.wheelOmega = 0;
-    this.clutchSlipRpm = !clutchOpen && this.engineOn ? Math.abs(this.rpm - this.wheelOmega * ratio * 60 / (2 * Math.PI)) : 0;
+    this.clutchSlipRpm = ratio !== 0 ? Math.abs(this.rpm - this.wheelOmega * ratio * 60 / (2 * Math.PI)) : 0;
     if (this.engineOn && this.clutchMode === "manual" && !clutchOpen && this.rpm < eng.idleRpm * 0.52) {
       this.stallTimer += dt;
       if (this.stallTimer > 0.4) this.stall();
     } else this.stallTimer = 0;
 
-    // Speed limit reverse & sanity
-    // Gearbox input-shaft speed (signed by the selected ratio) for instruments.
+    // The input shaft follows the driven wheels through the selected gear.
+    // In neutral its independent speed is not modelled.
     this.inputShaftRpm = ratio !== 0 ? (this.wheelOmega * ratio * 60) / (2 * Math.PI) : 0;
-    if (this.gear === -1 && Math.abs(this.wheelOmega) * r * 3.6 > 9 && this.throttle > 0.2) {
-      this.wheelOmega *= 0.995;
-    }
-    let speedMs = this.wheelOmega * r;
-    if (this.gear === -1 && speedMs < -11) {
-      this.wheelOmega = -11 / r;
-      speedMs = -11;
-    }
-    if (this.gear >= 0 && speedMs < 0) this.wheelOmega *= 0.98;
-    if (Math.abs(speedMs) < 0.02 && this.throttle < 0.02) this.wheelOmega = 0;
 
     // Temperatures & ancillaries
     const targetCoolant = this.engineOn ? 88 + this.throttle * 4 : this.coolantC - (this.coolantC - 26) * dt * 0.02;
@@ -554,13 +563,12 @@ export class DynoSimulation {
     this.cel = this.stalled;
 
     // Torque + power model (wheel values measured/derived from roller state)
-    const wheelAngular = Math.abs(this.wheelOmega);
     this.wheelTorque = clutchTorque * ratio * gearbox.efficiency;
-    this.wheelPowerHp = (Math.max(0, this.wheelTorque) * wheelAngular) / 745.7;
+    this.wheelPowerHp = Math.max(0, this.wheelTorque * this.wheelOmega) / 745.7;
     this.enginePowerKw = (Math.abs(grossTorque) * this.rpm) / 9549;
     this.enginePowerHp = Math.max(0, this.enginePowerKw) * 1.34102;
-    this.crankPowerHp = (this.wheelPowerHp / Math.max(gearbox.efficiency * 0.94, 0.6)) * (gearbox.drivetrain === "4WD" ? 0.92 : 1);
-    this.engineTorque = grossTorque - friction;
+    this.crankPowerHp = this.wheelPowerHp / gearbox.efficiency;
+    this.engineTorque = this.engineOn ? engineNet : (this.rpm > 0 ? engineNet : 0);
 
     // Save live pull
     if (this.pulling) {
@@ -618,7 +626,8 @@ export class DynoSimulation {
       redline: eng.redline,
       limiterRpm: eng.limiter,
       speedKph,
-      rollerRpm: wheelRpm,
+      wheelRpm,
+      rollerRpm: (speedKph / 3.6 / ROLLER_RADIUS_M) * 60 / (2 * Math.PI),
       gear: this.gear,
       gearLabel: this.gearLabel,
       clutch: this.clutchActual,

@@ -60,6 +60,8 @@ export interface Vehicle {
     ratios: number[];
     reverse: number;
     finalDrive: number;
+    /** Additional constant gearbox reduction, when specified. */
+    primaryReduction?: number;
     drivetrain: "FWD" | "RWD" | "4WD";
     efficiency: number;
     clutchCapacityNm: number;
@@ -263,7 +265,7 @@ export const VEHICLES: Vehicle[] = [
       revHappiness: 0.96,
     },
     verified: ["1984 cc EA888", "227 hp", "350 Nm from 1500 rpm", "6-speed manual", "1350 kg"],
-    estimated: ["Torque curve above peak", "Clutch capacity", "Flywheel inertia"],
+    estimated: ["Gear ratios and final drive: variant and dual-final-drive architecture need verification", "Torque curve above peak", "Clutch capacity", "Flywheel inertia"],
     sources: [
       { label: "Volkswagen — Golf GTI", url: "https://www.volkswagen.co.uk/en/models/golf.html" },
       { label: "Wikipedia — Volkswagen Golf Mk7", url: "https://en.wikipedia.org/wiki/Volkswagen_Golf_Mk7" },
@@ -318,9 +320,10 @@ export const VEHICLES: Vehicle[] = [
     gearbox: {
       type: "6-speed manual",
       speeds: 6,
-      ratios: [3.133, 2.045, 1.481, 1.161, 0.943, 0.763],
+      ratios: [3.133, 2.045, 1.481, 1.161, 0.971, 0.811],
       reverse: 2.8,
       finalDrive: 4.1,
+      primaryReduction: 1.16,
       drivetrain: "RWD",
       efficiency: 0.91,
       clutchCapacityNm: 300,
@@ -348,8 +351,9 @@ export const VEHICLES: Vehicle[] = [
       revHappiness: 1.35,
     },
     verified: ["1997 cc F20C", "237 hp @ 8300 rpm", "207 Nm @ 7500 rpm", "6-speed manual", "9000 rpm redline"],
-    estimated: ["Gear ratio set for AP1", "Flywheel inertia", "Drivetrain loss"],
+    estimated: ["Flywheel inertia", "Drivetrain loss"],
     sources: [
+      { label: "Honda — S2000 transmission", url: "https://hondanews.com/en-US/releases/release-4a111fc377fd37d93a2f73004c34c870-honda-s2000-transmission" },
       { label: "Honda — S2000 heritage", url: "https://global.honda/en/heritage/" },
       { label: "Wikipedia — Honda S2000", url: "https://en.wikipedia.org/wiki/Honda_S2000" },
     ],
@@ -488,7 +492,7 @@ export const VEHICLES: Vehicle[] = [
       type: "6-speed manual",
       speeds: 6,
       ratios: [3.643, 2.08, 1.361, 1.024, 0.83, 0.686],
-      reverse: 3.583,
+      reverse: 3.673,
       finalDrive: 4.11,
       drivetrain: "FWD",
       efficiency: 0.93,
@@ -517,8 +521,9 @@ export const VEHICLES: Vehicle[] = [
       revHappiness: 0.98,
     },
     verified: ["1498 cc L15B7", "205 hp @ 5700 rpm", "260 Nm @ 2100–5000 rpm", "6-speed manual", "Helical LSD"],
-    estimated: ["Gear ratios from service data", "Clutch capacity", "Drivetrain loss"],
+    estimated: ["Final drive: Honda lists 4.105 but other sources list 4.35", "Clutch capacity", "Drivetrain loss"],
     sources: [
+      { label: "Honda News — 2019 Civic Si specifications", url: "https://hondanews.com/en-US/honda-automobiles/releases/release-aa554e0e5b624d799f9ce3e7296b828a-2019-civic-si-specifications-features" },
       { label: "Honda — Civic Si", url: "https://automobiles.honda.com/civic-si" },
       { label: "Wikipedia — Honda Civic (10th gen)", url: "https://en.wikipedia.org/wiki/Honda_Civic_(tenth_generation)" },
     ],
@@ -660,8 +665,8 @@ export const VEHICLES: Vehicle[] = [
     gearbox: {
       type: "7-speed manual",
       speeds: 7,
-      ratios: [3.59, 2.19, 1.55, 1.24, 1.05, 0.88, 0.72],
-      reverse: 3.59,
+      ratios: [3.91, 2.29, 1.58, 1.18, 0.94, 0.79, 0.62],
+      reverse: 3.55,
       finalDrive: 3.59,
       drivetrain: "RWD",
       efficiency: 0.93,
@@ -676,7 +681,7 @@ export const VEHICLES: Vehicle[] = [
       tyre: "305/30R20",
       wheelDiameterIn: 20,
     },
-    dyno: { peakPowerHp: 414, measuredWheelHp: 366, driveLoss: 0.12, note: "Rear-engine, rear-drive layout. Roller inertia includes the rear axle mass only." },
+    dyno: { peakPowerHp: 414, measuredWheelHp: 366, driveLoss: 0.12, note: "Rear-engine, rear-drive layout. Roller-equivalent inertia and losses are simulation estimates." },
     sound: {
       character: "turbo-flat6",
       label: "Twin-turbo flat-six",
@@ -689,9 +694,10 @@ export const VEHICLES: Vehicle[] = [
       rasp: 0.58,
       revHappiness: 1.14,
     },
-    verified: ["2981 cc twin-turbo flat-six", "414 hp @ 6500 rpm", "500 Nm @ 1700–5000 rpm", "7-speed manual", "1450 kg"],
-    estimated: ["Manual gear ratios", "Flywheel inertia", "Drivetrain loss"],
+    verified: ["2981 cc twin-turbo flat-six", "414 hp @ 6500 rpm", "500 Nm @ 1700–5000 rpm", "7-speed manual ratios, reverse and total rear axle ratio", "1450 kg"],
+    estimated: ["Flywheel inertia", "Drivetrain loss"],
     sources: [
+      { label: "Porsche 911 Carrera S technical specifications (September 2015)", url: "https://www.motorshow.me/uploadImages/GalleryDocs/Doc6116.pdf" },
       { label: "Porsche — 911 Carrera S (991.2) press", url: "https://newsroom.porsche.com/en/products/porsche-911-carrera-s-991-generation-ii-11723.html" },
       { label: "Wikipedia — Porsche 911 (991)", url: "https://en.wikipedia.org/wiki/Porsche_911_(991)" },
     ],
@@ -743,10 +749,10 @@ export const VEHICLES: Vehicle[] = [
       ],
     },
     gearbox: {
-      type: "6-speed manual (TR6060)",
+      type: "6-speed manual (TR3160)",
       speeds: 6,
-      ratios: [4.48, 2.62, 1.75, 1.33, 1.0, 0.75],
-      reverse: 3.28,
+      ratios: [4.40, 2.59, 1.80, 1.34, 1.0, 0.75],
+      reverse: 3.99,
       finalDrive: 3.27,
       drivetrain: "RWD",
       efficiency: 0.91,
@@ -774,9 +780,11 @@ export const VEHICLES: Vehicle[] = [
       rasp: 0.5,
       revHappiness: 1.02,
     },
-    verified: ["3649 cc LGX V6", "335 hp @ 6800 rpm", "385 Nm @ 5300 rpm", "6-speed manual", "6th-gen Alpha platform"],
-    estimated: ["Manual ratios", "Flywheel inertia", "Drivetrain loss"],
+    verified: ["3649 cc LGX V6", "335 hp @ 6800 rpm", "385 Nm @ 5300 rpm", "TR3160 manual gear ratios and 3.27 axle", "6th-gen Alpha platform"],
+    estimated: ["Flywheel inertia", "Drivetrain loss"],
     sources: [
+      { label: "2016 Camaro preliminary transmission specifications", url: "https://gmauthority.com/blog/2015/05/and-now-the-preliminary-specifications-of-the-2016-chevy-camaro/" },
+      { label: "2016 Camaro 1LT specifications and axle", url: "https://www.caranddriver.com/chevrolet/camaro/specs/2016/chevrolet_camaro_chevrolet-camaro-coupe_2016" },
       { label: "Chevrolet — Camaro", url: "https://www.chevrolet.com/camaro" },
       { label: "Wikipedia — Chevrolet Camaro (6th gen)", url: "https://en.wikipedia.org/wiki/Chevrolet_Camaro_(sixth_generation)" },
     ],
@@ -847,7 +855,7 @@ export const VEHICLES: Vehicle[] = [
       tyre: "275/40R19",
       wheelDiameterIn: 19,
     },
-    dyno: { peakPowerHp: 435, measuredWheelHp: 372, driveLoss: 0.15, note: "2017 model figures. Use 4th gear (1:1) for the cleanest roller measurement." },
+    dyno: { peakPowerHp: 435, measuredWheelHp: 372, driveLoss: 0.15, note: "2017 model figures. Fifth gear is 1:1 in this MT-82 ratio set; simulated losses and wheel power are estimates." },
     sound: {
       character: "na-petrol-v8",
       label: "Coyote V8",
@@ -863,6 +871,7 @@ export const VEHICLES: Vehicle[] = [
     verified: ["4951 cc Coyote V8", "435 hp @ 6500 rpm", "542 Nm @ 4250 rpm", "6-speed manual"],
     estimated: ["MT-82 ratio set", "Flywheel inertia", "Drivetrain loss"],
     sources: [
+      { label: "MT-82 transmission ratios (aftermarket reference)", url: "https://www.bearingkits.co.uk/FORD-GEARBOX-PARTS/FORD-MUSTANG-6-SPEED-MT82-GEARBOX-PARTS/C1-101-1-0.htm" },
       { label: "Ford — Mustang", url: "https://www.ford.com/cars/mustang/" },
       { label: "Wikipedia — Ford Mustang (S550)", url: "https://en.wikipedia.org/wiki/Ford_Mustang_(S550)" },
     ],
@@ -1021,7 +1030,7 @@ export const VEHICLES: Vehicle[] = [
       tyre: "265/60R18",
       wheelDiameterIn: 18,
     },
-    dyno: { peakPowerHp: 174, measuredWheelHp: 125, driveLoss: 0.28, note: "Heavy 4WD pickup. Roller inertia is raised and tyre slip should be expected at high torque." },
+    dyno: { peakPowerHp: 174, measuredWheelHp: 125, driveLoss: 0.28, note: "Heavy 4WD pickup. Roller-equivalent inertia is estimated; tyre slip is not modelled." },
     sound: {
       character: "turbo-diesel-i4",
       label: "1GD-FTV diesel",

@@ -26,6 +26,7 @@ jobs:
       - run: npm ci
       - run: npx tsc --noEmit
       - run: npm run test:physics
+      - run: npm run test:drivetrain
       - run: npm run test:custom
       - run: npm run build
       - uses: actions/upload-pages-artifact@v3

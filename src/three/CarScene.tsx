@@ -1,3 +1,4 @@
+import { ROLLER_RADIUS_M } from "../lib/dynoGeometry";
 import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
@@ -28,7 +29,7 @@ interface CarSceneProps {
   paintIndex?: number;
 }
 
-const ROLLER_R = 0.17;
+const ROLLER_R = ROLLER_RADIUS_M;
 
 export default function CarScene({ vehicle, state, camera, cameraNonce, mode = "dyno", graphics, headlights = true, paintIndex = 0 }: CarSceneProps) {
   const mountRef = useRef<HTMLDivElement>(null);
