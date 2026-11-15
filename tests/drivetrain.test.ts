@@ -69,6 +69,8 @@ for (const v of vehicles) for (const mode of ['manual','assisted','auto'] as con
   coast.wheelOmega = coast.rpm * 2 * Math.PI / 60 / (v.gearbox.ratios[1] * v.gearbox.finalDrive);
   coast.dynoLoad=0; coast.tick(dt);
   assert(coast.clutchTorque < 0 && coast.wheelTorque < 0, `${v.id} ${mode}: engine braking`);
+  const ratio=v.gearbox.ratios[1]*v.gearbox.finalDrive*(v.gearbox.primaryReduction??1);
+  assert(Math.abs(coast.wheelTorque - coast.clutchTorque * ratio / v.gearbox.efficiency)<1e-7, `${v.id} ${mode}: overrun loss`);
   // Reverse accelerates in the opposite direction without a fixed speed cap.
   const reverse = new DynoSimulation(v); reverse.setClutchMode(mode); reverse.engineOn=true;
   reverse.gear=-1; reverse.rpm=v.engine.idleRpm;
@@ -94,4 +96,78 @@ console.log('Engine braking, reverse launch and direction-change safety passed a
  const v=VEHICLES[0], s=new DynoSimulation(v); s.setClutchMode('manual');s.engineOn=true;
  s.gear=1;s.rpm=v.engine.limiter+500;s.wheelOmega=s.rpm*2*Math.PI/60/(v.gearbox.ratios[0]*v.gearbox.finalDrive);
  s.tick(dt);assert(s.rpm>v.engine.limiter+220,'mechanical over-rev must not be hidden');
+}
+
+// At a settled full-load torque-curve anchor, net crank output must equal
+// the published/modelled net anchor; friction and boost must not be deducted twice.
+for (const v of vehicles) {
+  const anchor=v.engine.torqueCurve.find(p=>p.rpm>=Math.max(v.engine.idleRpm*1.6,1200) && p.rpm<v.engine.limiter-250)!;
+  assert(anchor,`${v.id}: usable torque anchor`);
+  const s=new DynoSimulation(v);s.engineOn=true;s.gear=0;s.rpm=anchor.rpm;
+  s.throttle=1;s.throttleTarget=1;
+  if(v.engine.boostBar) s.boost=v.engine.boostBar * Math.max(0,Math.min(1,(anchor.rpm-900)/1900)) ** 2 * (3-2*Math.max(0,Math.min(1,(anchor.rpm-900)/1900)));
+  s.tick(dt);
+  assert(Math.abs(s.engineTorque-anchor.nm)<1e-8,`${v.id}: full-load curve anchor ${s.engineTorque} vs ${anchor.nm}`);
+}
+console.log('Full-load curve anchors are net crank torque across fleet.');
+
+// The net crank curve should match the rated power at the manufacturer's
+// rated RPM, within 5%; this does not certify the rest of an estimated curve.
+for (const v of VEHICLES) {
+  assert(!auditVehicle(v).warnings.some(w=>w.includes('rated power RPM')),`${v.id}: rated power and torque curve disagree`);
+}
+{
+ const bad=structuredClone(VEHICLES[0]);bad.engine.torqueCurve=bad.engine.torqueCurve.map(p=>({...p,nm:p.nm*0.5}));
+ assert(auditVehicle(bad).warnings.some(w=>w.includes('rated power RPM')));
+ bad.chassis.tyre='junk 185/65R15 trailing';assert(auditVehicle(bad).errors.some(w=>w.includes('tyre')));
+}
+
+// Compare launch integration at the app's 120 Hz and at twice that frequency.
+// This checks numerical convergence, not real-world acceleration calibration.
+for (const v of vehicles) {
+  const speeds:number[]=[];
+  for (const step of [1/120,1/240]) {
+    const s=new DynoSimulation(v);s.engineOn=true;s.rpm=v.engine.idleRpm;
+    s.selectGear(1);s.setInputs({throttle:0.7});
+    for(let i=0;i<Math.round(6/step);i++) s.tick(step);
+    speeds.push(s.snapshot().speedKph);
+    assert(Number.isFinite(s.clutchSlipRpm) && s.wheelOmega>0,`${v.id}: launch convergence`);
+  }
+  assert(Math.abs(speeds[0]-speeds[1])<Math.max(1,0.04*speeds[1]),`${v.id}: timestep sensitivity ${speeds}`);
+}
+console.log('Six-second assisted launches converge between 120 Hz and 240 Hz across fleet.');
+
+// Every adjacent gear selection is executed from a moving open-clutch state.
+// Manual shifts interrupt torque by opening the clutch; assisted and bypass
+// use the actuator. Verify engagement rather than only checking finite RPM.
+for (const v of vehicles) for (const mode of ['manual','assisted','auto'] as const) {
+ for(let gear=1;gear<v.gearbox.speeds;gear++) {
+  const s=new DynoSimulation(v);s.setClutchMode(mode);s.engineOn=true;s.gear=gear;
+  const ratio=v.gearbox.ratios[gear]*v.gearbox.finalDrive*(v.gearbox.primaryReduction??1);
+  s.rpm=Math.min(v.engine.redline*0.8,v.engine.limiter-400);
+  s.wheelOmega=s.rpm*2*Math.PI/60/ratio; // coupled to the *next* gear
+  // Current gear may require higher engine RPM at this wheel speed; instead
+  // begin with the clutch open to avoid imposing an impossible starting state.
+  s.clutchActual=1;s.clutchPedal=mode==='manual'?1:0;
+  s.setInputs({throttle:0.25});
+  s.selectGear(gear+1);assert.equal(s.gear,gear+1,`${v.id} ${mode} shift`);
+  if(mode==='manual')s.setInputs({clutch:0});
+  for(let i=0;i<240;i++)s.tick(dt);
+  assert(s.engineOn && s.clutchSlipRpm<3,`${v.id} ${mode} ${gear}->${gear+1}: slip ${s.clutchSlipRpm}`);
+  assert(Math.abs(s.inputShaftRpm-s.rpm)<3,`${v.id}: gearbox input`);
+ }
+}
+console.log('Every adjacent forward gear engages across factory and sample custom vehicles in all modes.');
+
+// Anti-stall control may request spare torque, but cannot exceed the
+// full-load crank torque curve at low RPM when already at full throttle.
+for (const v of vehicles) for(const mode of ['assisted','auto'] as const) {
+ const s=new DynoSimulation(v);s.setClutchMode(mode);s.engineOn=true;s.gear=1;s.rpm=v.engine.idleRpm;
+ s.throttle=1;s.throttleTarget=1;
+ const points=v.engine.torqueCurve; let available=points[0].nm;
+ for(let i=1;i<points.length && v.engine.idleRpm>points[0].rpm;i++) {
+   if(v.engine.idleRpm<=points[i].rpm) {const a=points[i-1],b=points[i],t=(v.engine.idleRpm-a.rpm)/(b.rpm-a.rpm);available=a.nm+(b.nm-a.nm)*t*t*(3-2*t);break;}
+ }
+ s.tick(dt);
+ assert(s.engineTorque<=available+1e-7,`${v.id} ${mode}: anti-stall exceeded full-load torque`);
 }
