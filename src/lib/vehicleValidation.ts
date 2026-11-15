@@ -18,11 +18,27 @@ export function auditVehicle(v: Vehicle): VehicleAudit {
   if (!Number.isFinite(g.finalDrive) || g.finalDrive <= 0 || !Number.isFinite(g.reverse) || g.reverse <= 0) errors.push('Invalid final drive or reverse ratio.');
   if (g.primaryReduction !== undefined && (!Number.isFinite(g.primaryReduction) || g.primaryReduction <= 0)) errors.push('Invalid primary reduction.');
   if (g.finalDrive < 2 || g.finalDrive > 6) warnings.push('Final drive outside typical road-car range; review.');
-  if (!/\d{3}\/\d{2}R\d{2}/i.test(v.chassis.tyre)) errors.push('Missing or malformed tyre dimensions.');
+  if (!/^\d{3}\/\d{2}R\d{2}$/i.test(v.chassis.tyre.trim())) errors.push('Missing or malformed tyre dimensions.');
   if (!Number.isFinite(e.flywheelInertia) || e.flywheelInertia <= 0 || !Number.isFinite(g.clutchCapacityNm) || g.clutchCapacityNm <= 0) errors.push('Invalid engine inertia or clutch capacity.');
   if (!(e.idleRpm > 0 && e.redline > e.idleRpm && e.limiter >= e.redline)) errors.push('Invalid engine RPM limits.');
   if (e.torqueCurve.length < 2 || e.torqueCurve.some((p,i) => !Number.isFinite(p.rpm) || !Number.isFinite(p.nm) || p.nm < 0 || (i>0 && p.rpm <= e.torqueCurve[i-1].rpm))) errors.push('Invalid or unordered torque curve.');
   if (!(g.efficiency > 0 && g.efficiency <= 1) || !(v.chassis.weightKg > 0)) errors.push('Invalid efficiency or mass.');
+  if (e.torqueCurve.length >= 2 && !errors.some(error => error.includes('torque curve'))) {
+    const points = e.torqueCurve;
+    let torqueAtRated = points[0].nm;
+    for (let i=1; i<points.length; i++) {
+      const a=points[i-1], b=points[i];
+      if (e.powerRpm <= b.rpm) {
+        const t=Math.max(0,Math.min(1,(e.powerRpm-a.rpm)/(b.rpm-a.rpm)));
+        torqueAtRated=a.nm+(b.nm-a.nm)*t*t*(3-2*t); break;
+      }
+      torqueAtRated=b.nm;
+    }
+    const calculatedHp=torqueAtRated*e.powerRpm*Math.PI/30/745.7;
+    if (!Number.isFinite(e.powerHp) || e.powerHp <= 0 || !Number.isFinite(e.powerRpm) || e.powerRpm <= 0) errors.push('Invalid rated engine power or power RPM.');
+    else if (Math.abs(calculatedHp-e.powerHp)/e.powerHp > 0.05) warnings.push('Torque curve at rated power RPM differs from stated horsepower by over 5%.');
+    if (Math.max(...points.map(p=>p.nm)) > e.torqueNm*1.05) warnings.push('Torque curve exceeds stated peak torque by over 5%.');
+  }
   if (g.clutchCapacityNm < e.torqueNm) warnings.push('Clutch capacity is lower than rated peak torque; sustained slip is possible.');
   if (v.estimated.some(s => /ratio|final.drive/i.test(s))) warnings.push('Ratios or final drive are estimates; independent verification is required.');
   const speeds = g.ratios.map((_,i)=>({gear:i+1,at1000:theoreticalGearSpeedKph(v,i+1,1000),at4000:theoreticalGearSpeedKph(v,i+1,4000),atRedline:theoreticalGearSpeedKph(v,i+1,e.redline)}));

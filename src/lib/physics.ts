@@ -469,11 +469,15 @@ export class DynoSimulation {
     if (this.fuelCutTimer > 0) this.fuelCutTimer -= dt;
 
     if (this.engineOn) {
-      const boostFactor = turbo
-        ? 0.58 + 0.42 * clamp(this.boost / Math.max(eng.boostBar ?? 1, 0.1), 0, 1.1)
+      // Published full-load curves are net crank torque at steady conditions.
+      // Use boost only for transient spool: the RPM-dependent boost target is
+      // already reflected in the supplied curve, and must not be applied twice.
+      const boostFactor = turbo && boostTarget > 0.001
+        ? 0.58 + 0.42 * clamp(this.boost / boostTarget, 0, 1)
         : 1;
       // Assisted shifts interrupt drive torque while the clutch is open.
-      grossTorque = this.torqueAt(this.rpm) * this.effectiveThrottle * boostFactor;
+      grossTorque = this.torqueAt(this.rpm) * this.effectiveThrottle * boostFactor
+        + friction * this.effectiveThrottle;
       if (this.effectiveThrottle < 0.07) {
         const idleWindow = this.rpm < eng.idleRpm + 420;
         const error = eng.idleRpm - this.rpm;
@@ -516,6 +520,7 @@ export class DynoSimulation {
     let engineOmega = this.rpm * (2 * Math.PI / 60);
     const engineNet = this.engineOn ? grossTorque - friction : -26;
     let clutchTorque = 0;
+    let driveEfficiencyFactor = gearbox.efficiency;
     if (!clutchOpen && this.engineOn) {
       let capacity = gearbox.clutchCapacityNm * clampForce * fade;
       if (this.clutchMode !== "manual" && this.rpm < eng.idleRpm * 1.55) {
@@ -526,7 +531,10 @@ export class DynoSimulation {
       const predictedEngine = engineOmega + engineNet / eng.flywheelInertia * dt;
       const predictedWheel = this.wheelOmega - resistTorque / wheelInertia * dt;
       const mismatch = predictedEngine - predictedWheel * ratio;
-      const effectiveMass = 1 / eng.flywheelInertia + ratio * ratio * gearbox.efficiency / wheelInertia;
+      // Power flowing from rollers back into the crank must also lose energy.
+      // In overrun the wheels provide more braking torque than the crank receives.
+      driveEfficiencyFactor = mismatch < 0 ? 1 / gearbox.efficiency : gearbox.efficiency;
+      const effectiveMass = 1 / eng.flywheelInertia + ratio * ratio * driveEfficiencyFactor / wheelInertia;
       clutchTorque = clamp(mismatch / (effectiveMass * dt), -capacity, capacity);
       const slip = engineOmega - this.wheelOmega * ratio;
       this.clutchHeat = clamp(this.clutchHeat + Math.abs(clutchTorque * slip) * dt / 1000 * 0.9 - dt * 0.55, 0, 160);
@@ -537,7 +545,7 @@ export class DynoSimulation {
     engineOmega = Math.max(0, engineOmega + (engineNet - clutchTorque) / eng.flywheelInertia * dt);
     // Fuel cut limits powered revs, but cannot prevent a mechanical over-rev.
     this.rpm = engineOmega * 60 / (2 * Math.PI);
-    const drivenTorque = clutchTorque * ratio * gearbox.efficiency;
+    const drivenTorque = clutchTorque * ratio * driveEfficiencyFactor;
     this.wheelOmega += (drivenTorque - resistTorque) / wheelInertia * dt;
     // Static resistance cannot reverse a stopped roller on its own.
     if (oldWheel !== 0 && sign(oldWheel) !== sign(this.wheelOmega) && Math.abs(drivenTorque) < resistForce * r) this.wheelOmega = 0;
@@ -563,9 +571,9 @@ export class DynoSimulation {
     this.cel = this.stalled;
 
     // Torque + power model (wheel values measured/derived from roller state)
-    this.wheelTorque = clutchTorque * ratio * gearbox.efficiency;
+    this.wheelTorque = drivenTorque;
     this.wheelPowerHp = Math.max(0, this.wheelTorque * this.wheelOmega) / 745.7;
-    this.enginePowerKw = (Math.abs(grossTorque) * this.rpm) / 9549;
+    this.enginePowerKw = Math.max(0, engineNet * this.rpm / 9549);
     this.enginePowerHp = Math.max(0, this.enginePowerKw) * 1.34102;
     this.crankPowerHp = this.wheelPowerHp / gearbox.efficiency;
     this.engineTorque = this.engineOn ? engineNet : (this.rpm > 0 ? engineNet : 0);

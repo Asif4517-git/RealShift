@@ -8,7 +8,7 @@ The fixed-step tests exercise every factory vehicle and two sample custom builds
 
 ## Ideal gearing audit
 
-Speeds are theoretical km/h at 4,000 engine RPM with a fully coupled clutch. This is not an achievable-speed or shift recommendation; 4,000 RPM can be close to or beyond a diesel's normal operating range. Original ratios and tyre sizes are unchanged. A *review* flag signals ratios or final drive identified as estimated in the vehicle record; no flag is not proof of correctness.
+Speeds are theoretical km/h at 4,000 engine RPM with a fully coupled clutch. This is not an achievable-speed or shift recommendation; 4,000 RPM can be close to or beyond a diesel's normal operating range. The table reflects the current documented ratios and tyre sizes; earlier changes are described below. A *review* flag signals ratios or final drive identified as estimated in the vehicle record; no flag is not proof of correctness.
 
 | Vehicle | Gear speeds at 4,000 RPM, first through highest | Review |
 | --- | --- | --- |
@@ -17,7 +17,7 @@ Speeds are theoretical km/h at 4,000 engine RPM with a fully coupled clutch. Thi
 | Honda S2000 (s2000-ap1) | 31.9 / 48.9 / 67.6 / 86.2 / 103.1 / 123.4 | No automated warning; source verification still needed. |
 | Toyota Corolla Altis (corolla-altis-1.8) | 32.0 / 55.3 / 84.9 / 110.1 / 138.0 / 161.9 | Ratios or final drive are estimates; independent verification is required. |
 | Honda Civic Si (civic-si-2019) | 32.5 / 56.9 / 87.0 / 115.6 / 142.6 / 172.5 | Ratios or final drive are estimates; independent verification is required. |
-| BMW 320d (bmw-320d-f30) | 30.0 / 53.7 / 86.0 / 124.2 / 154.0 / 187.8 | Ratios or final drive are estimates; independent verification is required. |
+| BMW 320d (bmw-320d-f30) | 37.5 / 68.5 / 109.7 / 153.9 / 192.0 / 233.6 | Based on 2013 pre-LCI 320d technical data; 2015 build-date applicability requires confirmation. |
 | Porsche 911 Carrera S (911-carrera-s-9912) | 37.1 / 63.4 / 91.9 / 123.0 / 154.4 / 183.7 / 234.1 | No automated warning; source verification still needed. |
 | Chevrolet Camaro LT (camaro-3.6-2016) | 36.9 / 62.7 / 90.2 / 121.1 / 162.3 / 216.4 | No automated warning; source verification still needed. |
 | Ford Mustang GT (mustang-gt-2017) | 38.8 / 58.4 / 84.0 / 107.6 / 142.0 / 218.5 | Ratios or final drive are estimates; independent verification is required. |
@@ -30,8 +30,17 @@ Speeds are theoretical km/h at 4,000 engine RPM with a fully coupled clutch. Thi
 | Hyundai i20 N Line (hyundai-i20-nline-2023-mt) | 30.1 / 55.7 / 84.7 / 112.1 / 140.7 / 167.5 | Ratios or final drive are estimates; independent verification is required. |
 | Toyota Fortuner (toyota-fortuner-2021-28-mt) | 31.3 / 55.0 / 89.1 / 131.3 / 174.1 / 220.1 | Ratios or final drive are estimates; independent verification is required. |
 
+## Latest net torque and loss audit
+
+Full-load torque anchors represent *net* crank output, not indicated combustion torque. The prior simulator subtracted friction again, and applied an RPM-dependent boost factor on top of a curve already reflecting steady-state turbo behavior. This understated rated output. Full-load friction compensation now prevents double subtraction, and boost alters output during spool rather than permanently scaling an already calibrated curve. This is still a simplified turbo and part-throttle model; the net torque curves between published anchors are estimates. Coast torque now includes loss in the wheel-to-engine direction rather than making the loss act in reverse.
+
+The GTI, Corolla, Civic Si, 320d, 911, Camaro and Hilux interpolated curves have been adjusted to align with their existing stated peak-power RPM and ratings. These are calculated anchors, **not measured dyno curves**; shapes between anchors remain estimates. The validation utility now flags a rated power/curve discrepancy over 5%. A factory-wide automated check verifies that relationship, not real-world acceleration. Porsche behavior therefore changed specifically to correct the old 365 hp curve at its stated 414 hp power peak; this is not a claim of measured Porsche performance.
+
+The current dyno inertia remains an estimated road-equivalent mass plus roller inertia, not an independently measured dyno specification; the test results do not validate an on-road 0–100 time. Launch sampled over eight seconds from idle in assisted mode showed eventual coupling in the existing build, rather than reproducing persistent slip in that single scenario. Individual driver input, load settings, clutch heat and unverified gearing can still affect behavior.
+
 ## Source spot checks (not a complete fleet verification)
 
+- [BMW 2013 pre-LCI 320d sedan specifications](https://www.press.bmwgroup.com/global/article/attachment/T0136739EN/209106) specify 4.110 / 2.248 / 1.403 / 1.000 / 0.802 / 0.659, reverse 3.727 and differential 3.231. These replace the previous estimates for the N47 rear-drive manual. The record year is 2015, and pre-/post-facelift build-date applicability is still a caveat.
 - [Honda S2000 transmission documentation](https://hondanews.com/en-US/releases/release-4a111fc377fd37d93a2f73004c34c870-honda-s2000-transmission) lists a 1.160 primary reduction in addition to the 4.100 differential, and different fifth and sixth ratios from the previously modelled AP2-like values. The AP1 now uses 0.971 and 0.811 and includes the primary reduction in forward, reverse, shift safety and speed calculations. These values match the [2000 specifications](https://www.thecarconnection.com/specifications/honda_s2000_2000).
 - [VW’s 2017 US GTI specification](https://media.vw.com/assets/documents/original/6416-116801676557d8494f0ae0f.pdf) lists two final-drive ratios, unlike the single-final-drive model used for the European variant here. The current ratios are now flagged as provisional; source and architecture must be reconciled rather than silently treating the single final as verified.
 - The [991.2 Carrera S specification sheet](https://www.motorshow.me/uploadImages/GalleryDocs/Doc6116.pdf) specifies 3.91 / 2.29 / 1.58 / 1.18 / 0.94 / 0.79 / 0.62, reverse 3.55 and **total** rear axle ratio 3.59 (including the constant 1.16 stage). The previously estimated gear set and reverse were corrected; using only the 3.09 axle component would omit a reduction stage.

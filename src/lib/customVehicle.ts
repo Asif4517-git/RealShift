@@ -91,8 +91,8 @@ export function estimateTopSpeed(s: CustomSpec): number {
     const canMaintain = s.ratios.some(gear => {
       const overall=gear*s.finalDrive, rpm=speed/radius*overall*60/(2*Math.PI);
       if (rpm < s.idleRpm || rpm > s.redline) return false;
-      const friction=v.engine.frictionTorque*(0.55+0.7*rpm/s.redline)+2;
-      return Math.max(0, torqueAt(rpm)-friction)*overall*v.gearbox.efficiency/radius >= resistance;
+      // Full-load torque anchors are already net crank torque.
+      return Math.max(0, torqueAt(rpm))*overall*v.gearbox.efficiency/radius >= resistance;
     });
     if (canMaintain) best = kph;
   }
