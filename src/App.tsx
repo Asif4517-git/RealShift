@@ -10,7 +10,7 @@ import type { Vehicle } from "./lib/vehicles";
 import type { AppView } from "./lib/views";
 
 function Shell() {
-  const { settings } = useStore();
+  const { settings, storageError } = useStore();
   const [view, setView] = useState<AppView>("dyno");
   const [mobileNav, setMobileNav] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -69,6 +69,7 @@ function Shell() {
           onOpenAudio={openAudio}
           onAbout={() => navigate("about")}
         />
+        {storageError && <div role="alert" className="border-b border-warm/40 bg-[#332416] px-4 py-3 text-sm text-[#ffe0ae]">Browser storage is unavailable, full, or contains unrecognized records. Changes and new runs may not survive a reload. Existing unrecognized data is left untouched. Export important visible runs and check your browser storage settings.</div>}
         <main className="min-h-[calc(100vh-54px)]">
           {view === "dyno" && (
             <DynoBay

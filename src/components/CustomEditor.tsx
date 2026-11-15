@@ -1,3 +1,4 @@
+import { localId } from "../lib/ids";
 import { useState } from 'react';
 import { DEFAULT_CUSTOM, validateCustom, estimateTopSpeed, suggestRatios, type CustomBuild, type CustomSpec } from '../lib/customVehicle';
 import { useStore } from '../lib/store';
@@ -5,7 +6,7 @@ import { Button, Panel } from './ui';
 
 const copyDefault = () => ({ ...DEFAULT_CUSTOM, ratios: [...DEFAULT_CUSTOM.ratios] });
 export function CustomEditor() {
-  const { customBuilds, saveCustom, deleteCustom, selectVehicle, settings, updateSettings } = useStore();
+  const { customBuilds, saveCustom, deleteCustom, selectVehicle, settings, updateSettings, storageError } = useStore();
   const [id, setId] = useState<string | null>(null);
   const [spec, setSpec] = useState<CustomSpec>(copyDefault);
   const [ratioText, setRatioText] = useState(DEFAULT_CUSTOM.ratios.join(', '));
@@ -20,8 +21,8 @@ export function CustomEditor() {
     const ratios = ratioText.split(',').map(x => x.trim() === '' ? NaN : Number(x));
     const next = { ...spec, ratios }; const errors = validateCustom(next);
     if (errors.length) { setMessage(errors.join(' ')); return; }
-    const buildId = id ?? `custom-${crypto.randomUUID()}`;
-    saveCustom({ id: buildId, spec: next }); setId(buildId); setSpec(next); setMessage('Build saved and selected.');
+    const buildId = id ?? localId("custom");
+    saveCustom({ id: buildId, spec: next }); setId(buildId); setSpec(next); setMessage(storageError ? 'Build selected for this session. Browser storage is unavailable or protected; it may not be saved.' : 'Build saved and selected.');
   };
   return <Panel className="space-y-4 p-4 sm:p-5">
     <div><h2 className="font-display text-xl text-fg">Custom vehicle editor</h2><p className="mt-1 text-xs text-mut">User-defined estimates, not certified specifications. Audio uses the closest available engine family. Top-speed target is a design goal, not a speed cap.</p></div>

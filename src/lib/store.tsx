@@ -83,6 +83,7 @@ interface StoreValue {
   vehicle: ReturnType<typeof getVehicle>;
   runs: DynoRun[];
   customBuilds: CustomBuild[];
+  storageError: boolean;
   saveCustom: (build: CustomBuild) => void;
   deleteCustom: (id: string) => void;
   updateSettings: (patch: Partial<Settings>) => void;
@@ -119,6 +120,32 @@ function load<T>(key: string, fallback: T): T {
 }
 
 export function StoreProvider({ children }: { children: ReactNode }) {
+  // Keep unrecognized records intact rather than replacing them with a filtered/empty list.
+  const protectedKeys = useRef<Set<string> | null>(null);
+  if (!protectedKeys.current) {
+    const protectedSet = new Set<string>();
+    for (const key of [CUSTOM_KEY, RUNS_KEY]) {
+      try {
+        const raw = localStorage.getItem(key);
+        if (!raw) continue;
+        const data: unknown = JSON.parse(raw);
+        const valid = Array.isArray(data) && data.every(item => {
+          if (!item || typeof item !== "object") return false;
+          if (key === CUSTOM_KEY) {
+            try { return typeof item.id === "string" && item.id.startsWith("custom-") && validateCustom(item.spec).length === 0; } catch { return false; }
+          }
+          return typeof item.id === "string" && typeof item.vehicleId === "string" && typeof item.label === "string" && Array.isArray(item.samples);
+        });
+        if (!valid) protectedSet.add(key);
+      } catch { protectedSet.add(key); }
+    }
+    protectedKeys.current = protectedSet;
+  }
+  const [storageError, setStorageError] = useState(protectedKeys.current.size > 0);
+  const persist = useCallback((key: string, value: unknown) => {
+    if (protectedKeys.current?.has(key)) return;
+    try { localStorage.setItem(key, JSON.stringify(value)); } catch { setStorageError(true); }
+  }, []);
   const [settings, setSettings] = useState<Settings>(() => ({
     ...DEFAULT_SETTINGS,
     ...load<Settings>(SETTINGS_KEY, DEFAULT_SETTINGS),
@@ -133,27 +160,18 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   });
   const [vehicleId, setVehicleId] = useState<string>(() => {
     const stored = load<string>(VEHICLE_KEY, DEFAULT_VEHICLE_ID);
-    return VEHICLES.some((v) => v.id === stored) || (Array.isArray(load<CustomBuild[]>(CUSTOM_KEY, [])) && load<CustomBuild[]>(CUSTOM_KEY, []).some(b => b.id === stored && (() => { try { return validateCustom(b.spec).length === 0; } catch { return false; } })())) ? stored : DEFAULT_VEHICLE_ID;
+    return VEHICLES.some((v) => v.id === stored) || customBuilds.some(b => b.id === stored) ? stored : DEFAULT_VEHICLE_ID;
   });
-  const [runs, setRuns] = useState<DynoRun[]>(() => load<DynoRun[]>(RUNS_KEY, []));
+  const [runs, setRuns] = useState<DynoRun[]>(() => {
+    const value = load<DynoRun[]>(RUNS_KEY, []);
+    return Array.isArray(value) ? value.filter(r => r && typeof r.id === "string" && typeof r.vehicleId === "string" && typeof r.label === "string" && Array.isArray(r.samples)) : [];
+  });
 
-  useEffect(() => { try { localStorage.setItem(CUSTOM_KEY, JSON.stringify(customBuilds)); } catch { /* storage unavailable */ } }, [customBuilds]);
-  useEffect(() => {
-    localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
-  }, [settings]);
-  useEffect(() => {
-    localStorage.setItem(BINDINGS_KEY, JSON.stringify(bindings));
-  }, [bindings]);
-  useEffect(() => {
-    localStorage.setItem(VEHICLE_KEY, JSON.stringify(vehicleId));
-  }, [vehicleId]);
-  useEffect(() => {
-    try {
-      localStorage.setItem(RUNS_KEY, JSON.stringify(runs.slice(0, 14)));
-    } catch {
-      /* quota: run samples can be large */
-    }
-  }, [runs]);
+  useEffect(() => { persist(CUSTOM_KEY, customBuilds); }, [customBuilds, persist]);
+  useEffect(() => { persist(SETTINGS_KEY, settings); }, [settings, persist]);
+  useEffect(() => { persist(BINDINGS_KEY, bindings); }, [bindings, persist]);
+  useEffect(() => { persist(VEHICLE_KEY, vehicleId); }, [vehicleId, persist]);
+  useEffect(() => { persist(RUNS_KEY, runs.slice(0, 14)); }, [runs, persist]);
 
   const updateSettings = useCallback((patch: Partial<Settings>) => {
     setSettings((prev) => ({ ...prev, ...patch }));
@@ -203,7 +221,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       bindings,
       vehicleId,
       vehicle: selectedVehicle,
-      customBuilds, saveCustom, deleteCustom,
+      customBuilds, saveCustom, deleteCustom, storageError,
       runs,
       updateSettings,
       updateAudio,
@@ -216,7 +234,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       deleteRun,
       clearRuns,
     }),
-    [settings, bindings, vehicleId, selectedVehicle, runs, customBuilds, saveCustom, deleteCustom, updateSettings, updateAudio, setBinding, resetBinding, resetBindings, resetAllSettings, selectVehicle, addRun, deleteRun, clearRuns],
+    [settings, bindings, vehicleId, selectedVehicle, runs, customBuilds, storageError, saveCustom, deleteCustom, updateSettings, updateAudio, setBinding, resetBinding, resetBindings, resetAllSettings, selectVehicle, addRun, deleteRun, clearRuns],
   );
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;

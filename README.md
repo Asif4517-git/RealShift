@@ -33,7 +33,7 @@ site is available at `https://asif4517-git.github.io/RealShift/`.
 
 | Area | Implementation |
 | --- | --- |
-| Vehicle database | 11 real production models across NA petrol I4, turbo petrol I4, NA I4 sedan, NA V6, NA V8, twin-turbo flat-six, turbo diesel I4 and two 4×4 diesels |
+| Vehicle database | 17 real production models across petrol inline-three, inline-four, inline-six, V6, V8, flat-six and diesel configurations, plus user-defined custom vehicles |
 | Engine | Torque-anchor curve interpolation, flywheel inertia, friction/pumping losses, idle governor, boost lag, fuel-cut rev limiter, coolant/oil/fuel/battery state |
 | Clutch | Nonlinear clamp/bite curve, friction capacity, slip coupling, heat build-up with friction fade, manual/assisted/bypass modes, anti-stall reserve, stall behaviour and gearbox input-shaft speed |
 | Gearbox | Individual ratios and final drive per vehicle, reverse and neutral, sequential and direct selection |
@@ -68,7 +68,8 @@ cluster, the dyno chart and the audio engine — no gauge uses independent value
 ```
 α_engine = (T_curve(rpm)·throttle·k_boost − T_friction − T_clutch) / J_flywheel
 α_roller = (T_clutch·i_gear·i_final·η − ΣT_load) / (J_dyno + m·r²)
-rpm      = ω_wheel · i_gear · i_final · 60/(2π)
+rpm_engine = ω_engine · 60/(2π)
+rpm_input  = ω_wheel · i_gear · i_final · 60/(2π)  [clutch slip allows a difference]
 P_wheel  = T_wheel · ω_wheel / 745.7              [hp]
 P_crank  = P_wheel / η_drivetrain                 [estimated]
 v        = ω_wheel · r · 3.6                      [km/h]
@@ -125,6 +126,12 @@ with links.
 | Ford Mustang GT 5.0 S550 (2017) | ford.com/cars/mustang · en.wikipedia.org/wiki/Ford_Mustang_(S550) |
 | Mahindra Thar LX 4×4 2.2 (2020) | mahindra.com/auto/muvs-suvs/thar · en.wikipedia.org/wiki/Mahindra_Thar |
 | Toyota Hilux Invincible 2.8 (2018) | toyota.co.uk/new-cars/hilux · en.wikipedia.org/wiki/Toyota_Hilux |
+| Honda Civic Type R FK8 (2017) | [Honda US specifications](https://hondanews.com/en-US/honda-automobiles/releases/release-dda03e0c69c6476cbf2e0c544555aeef-2017-civic-type-r-specifications-features) |
+| BMW M3 G80 6MT (2021) | [BMW M3 specification discussion](https://www.i4talk.com/threads/specs-the-new-2021-bmw-m3-sedan-and-m4-coupe.73/) |
+| Toyota GR Supra A91-MT (2023) | [Toyota brochure](https://www.toyota.com/content/dam/toyota/brochures/pdf/2023/grsupra_ebrochure.pdf); gear ratios are provisional |
+| Mazda MX-5 ND2 (2020) | [Mazda specification](https://www.mazda-qatar.com/vehicles/mazda-mx-5/grades/default.php) |
+| Hyundai i20 N Line 6MT (2023) | [Autocar India](https://www.autocarindia.com/car-news/hyundai-i20-n-line-facelift-launched-at-rs-999-lakh-429372); gear ratios are provisional |
+| Toyota Fortuner 2.8 diesel 4x2 MT (2021) | [Autocar India](https://www.autocarindia.com/cars/toyota/fortuner/2.8l-diesel-4x2-mt); gear ratios are provisional |
 
 Bodies are **original procedural geometry** built to published length, width, height and
 wheelbase. No manufacturer CAD, logos, textures or game-ripped models are redistributed.
@@ -146,8 +153,8 @@ Vehicle artwork, the dyno bay, physics and interface are original project work. 
 
 ## Persistence keys
 
-`realshift.settings.v1`, `realshift.bindings.v1`, `realshift.vehicle.v1`,
-`realshift.runs.v1` — stored in `localStorage` on the current device only.
+`realshift.settings.v2`, `realshift.bindings.v1`, `realshift.vehicle.v1`,
+`realshift.runs.v1`, `realshift.custom.v1` — stored in `localStorage` on the current device only.
 
 ## Default controls
 
@@ -176,8 +183,7 @@ Switching designs never touches the simulation; the choice is saved in settings.
 
 ## Transmission validation
 
-`npm run test:physics` exercises the fixed-step simulation for a petrol four,
-diesel and V8 in all three clutch modes, plus manual stall, an unsafe downshift
+`npm run test:physics` exercises the fixed-step simulation for every factory vehicle in all three clutch modes, plus manual stall, an unsafe downshift
 and 180 seconds of numerical operation. These are automated model tests, not
 browser, listening or real-world validation.
 
@@ -213,5 +219,5 @@ Custom builds are user estimates. The displayed road-speed estimate assumes
 steady full load, flat road, no dyno resistance and the simulation's simplified
 aerodynamics; it is neither a guarantee nor a speed cap. Audio uses the nearest
 available recording family and many load/transition states remain unrecorded.
-Nine garage photographs are currently provided; they show representative
+Thirteen garage photographs are currently provided; they show representative
 trims and their licences and attribution are in `src/assets/cars/MANIFEST.md`.

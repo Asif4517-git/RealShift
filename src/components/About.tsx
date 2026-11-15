@@ -57,7 +57,7 @@ export function About({ onNavigate, onOpenControls }: { onNavigate: (view: AppVi
             <Button variant="ghost" size="lg" onClick={onOpenControls}><BookOpen size={13} /> Controls</Button>
           </div>
           <div className="mt-5 flex flex-wrap gap-x-5 gap-y-1.5 border-t border-white/[0.06] pt-3 font-mono text-[8px] uppercase tracking-[0.1em] text-mut-2">
-            <span className="flex items-center gap-1.5"><Check size={9} className="text-accent" /> 11 real vehicles</span>
+            <span className="flex items-center gap-1.5"><Check size={9} className="text-accent" /> {VEHICLES.length} real vehicles</span>
             <span className="flex items-center gap-1.5"><Check size={9} className="text-accent" /> 120 Hz fixed timestep</span>
             <span className="flex items-center gap-1.5"><Check size={9} className="text-accent" /> Local persistence</span>
           </div>
@@ -97,7 +97,7 @@ export function About({ onNavigate, onOpenControls }: { onNavigate: (view: AppVi
               { icon: Wrench, title: "Clutch & manual gearbox", text: "Manual, assisted and bypass clutch modes. Real gear counts and ratios, slip coupling, driveline lock-up and stall behaviour.", tag: "drivetrain" },
               { icon: Volume2, title: "Layered engine audio", text: "Web Audio blends recorded engine-family loops with modelled intake, turbo and roller layers.", tag: "audio" },
               { icon: CarFront, title: "Procedural dyno bay", text: "Original 3D vehicle bodies scaled to published dimensions, sitting on a modelled 4-axle roller set with studio cameras and live wheel motion.", tag: "3D" },
-              { icon: Database, title: "Sourced vehicle register", text: "Eleven real models across NA, turbo, diesel, V6, flat-six, V8 and 4x4 configurations, each with verified and estimated fields separated.", tag: "data" },
+              { icon: Database, title: "Sourced vehicle register", text: `${VEHICLES.length} real models across NA, turbo, diesel, V6, flat-six, V8 and 4x4 configurations, each with verified and estimated fields separated.`, tag: "data" },
               { icon: ShieldCheck, title: "Honest instrumentation", text: "No decorative gauges. Every readout is classified as simulated state, roller-derived or estimated, with methodology available in the data log.", tag: "trust" },
             ].map((feature) => {
               const Icon = feature.icon;
