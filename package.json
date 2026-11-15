@@ -13,7 +13,8 @@
     "test:audio-fallback": "node tests/audio-fallback.mjs",
     "test:custom-browser": "node tests/custom-browser.mjs",
     "test:audio-v8": "node tests/audio-v8-browser.mjs",
-    "test:storage-browser": "node tests/storage-browser.mjs"
+    "test:storage-browser": "node tests/storage-browser.mjs",
+    "test:run-delete": "node tests/run-delete-browser.mjs"
   },
   "dependencies": {
     "clsx": "2.1.1",
