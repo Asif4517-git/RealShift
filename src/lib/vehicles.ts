@@ -928,8 +928,8 @@ export const VEHICLES: Vehicle[] = [
     gearbox: {
       type: "6-speed manual + transfer case",
       speeds: 6,
-      ratios: [4.05, 2.71, 1.52, 1.0, 0.79, 0.66],
-      reverse: 3.9,
+      ratios: [3.78, 2.24, 1.43, 1.0, 0.79, 0.70],
+      reverse: 3.52,
       finalDrive: 4.1,
       drivetrain: "4WD",
       efficiency: 0.86,
@@ -959,8 +959,10 @@ export const VEHICLES: Vehicle[] = [
       revHappiness: 0.58,
     },
     verified: ["2179 cc mHawk", "130 hp @ 3750 rpm", "300 Nm @ 1600–2800 rpm", "6-speed manual", "4x4 with low-range transfer case"],
-    estimated: ["Transfer case + final ratios", "Clutch capacity", "Driveline loss"],
+    estimated: ["6R320M gear ratios: exact Thar sub-variant requires confirmation", "Transfer case + final ratios", "Clutch capacity", "Driveline loss"],
     sources: [
+      { label: "Mahindra 6R320M transmission specifications", url: "https://www.mahindrapowertrain.com/transmissions.html" },
+      { label: "2020 Thar diesel 6R320 identification", url: "https://www.indiatoday.in/auto/latest-auto-news/story/2020-mahindra-thar-first-impressions-exterior-interior-drive-review-1711689-2020-08-15" },
       { label: "Mahindra — Thar", url: "https://www.mahindra.com/auto/muvs-suvs/thar" },
       { label: "Wikipedia — Mahindra Thar", url: "https://en.wikipedia.org/wiki/Mahindra_Thar" },
     ],

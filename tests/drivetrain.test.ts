@@ -121,3 +121,40 @@ for (const v of VEHICLES) {
  assert(auditVehicle(bad).warnings.some(w=>w.includes('rated power RPM')));
  bad.chassis.tyre='junk 185/65R15 trailing';assert(auditVehicle(bad).errors.some(w=>w.includes('tyre')));
 }
+
+// Compare launch integration at the app's 120 Hz and at twice that frequency.
+// This checks numerical convergence, not real-world acceleration calibration.
+for (const v of vehicles) {
+  const speeds:number[]=[];
+  for (const step of [1/120,1/240]) {
+    const s=new DynoSimulation(v);s.engineOn=true;s.rpm=v.engine.idleRpm;
+    s.selectGear(1);s.setInputs({throttle:0.7});
+    for(let i=0;i<Math.round(6/step);i++) s.tick(step);
+    speeds.push(s.snapshot().speedKph);
+    assert(Number.isFinite(s.clutchSlipRpm) && s.wheelOmega>0,`${v.id}: launch convergence`);
+  }
+  assert(Math.abs(speeds[0]-speeds[1])<Math.max(1,0.04*speeds[1]),`${v.id}: timestep sensitivity ${speeds}`);
+}
+console.log('Six-second assisted launches converge between 120 Hz and 240 Hz across fleet.');
+
+// Every adjacent gear selection is executed from a moving open-clutch state.
+// Manual shifts interrupt torque by opening the clutch; assisted and bypass
+// use the actuator. Verify engagement rather than only checking finite RPM.
+for (const v of vehicles) for (const mode of ['manual','assisted','auto'] as const) {
+ for(let gear=1;gear<v.gearbox.speeds;gear++) {
+  const s=new DynoSimulation(v);s.setClutchMode(mode);s.engineOn=true;s.gear=gear;
+  const ratio=v.gearbox.ratios[gear]*v.gearbox.finalDrive*(v.gearbox.primaryReduction??1);
+  s.rpm=Math.min(v.engine.redline*0.8,v.engine.limiter-400);
+  s.wheelOmega=s.rpm*2*Math.PI/60/ratio; // coupled to the *next* gear
+  // Current gear may require higher engine RPM at this wheel speed; instead
+  // begin with the clutch open to avoid imposing an impossible starting state.
+  s.clutchActual=1;s.clutchPedal=mode==='manual'?1:0;
+  s.setInputs({throttle:0.25});
+  s.selectGear(gear+1);assert.equal(s.gear,gear+1,`${v.id} ${mode} shift`);
+  if(mode==='manual')s.setInputs({clutch:0});
+  for(let i=0;i<240;i++)s.tick(dt);
+  assert(s.engineOn && s.clutchSlipRpm<3,`${v.id} ${mode} ${gear}->${gear+1}: slip ${s.clutchSlipRpm}`);
+  assert(Math.abs(s.inputShaftRpm-s.rpm)<3,`${v.id}: gearbox input`);
+ }
+}
+console.log('Every adjacent forward gear engages across factory and sample custom vehicles in all modes.');
