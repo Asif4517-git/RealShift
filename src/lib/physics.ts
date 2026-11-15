@@ -257,8 +257,9 @@ export class DynoSimulation {
   private totalRatio() {
     const g = this.vehicle.gearbox;
     if (this.gear === 0) return 0;
-    if (this.gear === -1) return -g.reverse * g.finalDrive;
-    return g.ratios[this.gear - 1] * g.finalDrive;
+    const final = g.finalDrive * (g.primaryReduction ?? 1);
+    if (this.gear === -1) return -g.reverse * final;
+    return g.ratios[this.gear - 1] * final;
   }
 
   startEngine() {
@@ -318,8 +319,10 @@ export class DynoSimulation {
       this.emit("gear-reject");
       return;
     }
-    const ratio = target === -1 ? -this.vehicle.gearbox.reverse * this.vehicle.gearbox.finalDrive
-      : target === 0 ? 0 : this.vehicle.gearbox.ratios[target - 1] * this.vehicle.gearbox.finalDrive;
+    const g = this.vehicle.gearbox;
+    const final = g.finalDrive * (g.primaryReduction ?? 1);
+    const ratio = target === -1 ? -g.reverse * final
+      : target === 0 ? 0 : g.ratios[target - 1] * final;
     const inputRpm = this.wheelOmega * ratio * 60 / (2 * Math.PI);
     // A driven shaft turning backwards cannot be synchronised to a running
     // engine, regardless of how small its signed RPM appears.

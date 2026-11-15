@@ -4,7 +4,7 @@ import { tyreRadiusM, type Vehicle } from './vehicles';
 export function theoreticalGearSpeedKph(vehicle: Vehicle, gear: number, engineRpm: number): number {
   const ratio = vehicle.gearbox.ratios[gear - 1];
   if (!Number.isFinite(ratio) || ratio <= 0 || vehicle.gearbox.finalDrive <= 0 || !Number.isFinite(engineRpm) || engineRpm < 0) return NaN;
-  return engineRpm / (ratio * vehicle.gearbox.finalDrive) * 2 * Math.PI * tyreRadiusM(vehicle) * 60 / 1000;
+  return engineRpm / (ratio * vehicle.gearbox.finalDrive * (vehicle.gearbox.primaryReduction ?? 1)) * 2 * Math.PI * tyreRadiusM(vehicle) * 60 / 1000;
 }
 
 export interface VehicleAudit { errors: string[]; warnings: string[]; speeds: {gear:number; at1000:number; at4000:number; atRedline:number}[] }
@@ -16,6 +16,7 @@ export function auditVehicle(v: Vehicle): VehicleAudit {
   if (!Number.isInteger(g.speeds) || g.speeds < 1 || g.speeds > 12 || g.ratios.length !== g.speeds) errors.push('Gear count does not match ratios.');
   if (g.ratios.some((r,i) => !Number.isFinite(r) || r <= 0 || (i > 0 && r >= g.ratios[i-1]))) errors.push('Forward ratios must be finite, positive and decreasing.');
   if (!Number.isFinite(g.finalDrive) || g.finalDrive <= 0 || !Number.isFinite(g.reverse) || g.reverse <= 0) errors.push('Invalid final drive or reverse ratio.');
+  if (g.primaryReduction !== undefined && (!Number.isFinite(g.primaryReduction) || g.primaryReduction <= 0)) errors.push('Invalid primary reduction.');
   if (g.finalDrive < 2 || g.finalDrive > 6) warnings.push('Final drive outside typical road-car range; review.');
   if (!/\d{3}\/\d{2}R\d{2}/i.test(v.chassis.tyre)) errors.push('Missing or malformed tyre dimensions.');
   if (!Number.isFinite(e.flywheelInertia) || e.flywheelInertia <= 0 || !Number.isFinite(g.clutchCapacityNm) || g.clutchCapacityNm <= 0) errors.push('Invalid engine inertia or clutch capacity.');

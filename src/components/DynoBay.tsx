@@ -72,7 +72,7 @@ export function DynoBay({ onNavigate, onOpenControls, onOpenSettings, onOpenAudi
 
   const engineState = snap.starting ? "CRANKING" : snap.engineOn ? "RUNNING" : snap.stalled ? "STALLED" : "OFF";
   const currentRatio = snap.gear === 0 ? 0 : snap.gear === -1 ? vehicle.gearbox.reverse : vehicle.gearbox.ratios[snap.gear - 1];
-  const totalRatio = Math.abs(currentRatio * vehicle.gearbox.finalDrive);
+  const totalRatio = Math.abs(currentRatio * vehicle.gearbox.finalDrive * (vehicle.gearbox.primaryReduction ?? 1));
   const speedPer1000 = totalRatio > 0 ? (1000 / totalRatio) * (2 * Math.PI * tyreRadiusM(vehicle)) * 60 / 1000 : 0;
   const sessionTime = `${String(Math.floor(snap.runSeconds / 60)).padStart(2, "0")}:${String(Math.floor(snap.runSeconds % 60)).padStart(2, "0")}`;
   const rpmRatio = Math.min(1, snap.rpm / snap.redline);
@@ -407,7 +407,7 @@ export function DynoBay({ onNavigate, onOpenControls, onOpenSettings, onOpenAudi
               <details className="mt-3 rounded-lg border border-line-soft bg-black/20 p-2.5">
                 <summary className="cursor-pointer label-xs">Powertrain diagnostics</summary>
                 <div className="mt-2 space-y-1 font-mono text-[10px] text-mut">
-                  <div>Gear {snap.gearLabel} · Gear ratio {snap.gear === 0 ? "—" : nf(currentRatio, 3)} · Final {nf(vehicle.gearbox.finalDrive, 3)}</div>
+                  <div>Gear {snap.gearLabel} · Gear ratio {snap.gear === 0 ? "—" : nf(currentRatio, 3)} · Final {nf(vehicle.gearbox.finalDrive, 3)}{vehicle.gearbox.primaryReduction ? ` · Primary ${nf(vehicle.gearbox.primaryReduction, 3)}` : ""}</div>
                   <div>Engine {nf(snap.rpm)} rpm · Input {snap.gear === 0 ? "not modelled in neutral" : `${nf(snap.gearboxInputRpm)} rpm`}</div>
                   <div>Wheel {nf(snap.wheelRpm)} rpm · Roller {nf(snap.rollerRpm)} rpm · {nf(speedValue(snap.speedKph, units), 1)} {speedUnit(units)} equivalent</div>
                   <div>Clutch actuator (open) {nf(snap.clutch * 100)}% · Slip {snap.gear === 0 ? "—" : `${nf(snap.clutchSlipRpm)} rpm`} · Torque {nf(snap.clutchTorqueNm)} Nm</div>

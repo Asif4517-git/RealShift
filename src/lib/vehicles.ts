@@ -60,6 +60,8 @@ export interface Vehicle {
     ratios: number[];
     reverse: number;
     finalDrive: number;
+    /** Additional constant gearbox reduction, when specified. */
+    primaryReduction?: number;
     drivetrain: "FWD" | "RWD" | "4WD";
     efficiency: number;
     clutchCapacityNm: number;
@@ -263,7 +265,7 @@ export const VEHICLES: Vehicle[] = [
       revHappiness: 0.96,
     },
     verified: ["1984 cc EA888", "227 hp", "350 Nm from 1500 rpm", "6-speed manual", "1350 kg"],
-    estimated: ["Torque curve above peak", "Clutch capacity", "Flywheel inertia"],
+    estimated: ["Gear ratios and final drive: variant and dual-final-drive architecture need verification", "Torque curve above peak", "Clutch capacity", "Flywheel inertia"],
     sources: [
       { label: "Volkswagen — Golf GTI", url: "https://www.volkswagen.co.uk/en/models/golf.html" },
       { label: "Wikipedia — Volkswagen Golf Mk7", url: "https://en.wikipedia.org/wiki/Volkswagen_Golf_Mk7" },
@@ -318,9 +320,10 @@ export const VEHICLES: Vehicle[] = [
     gearbox: {
       type: "6-speed manual",
       speeds: 6,
-      ratios: [3.133, 2.045, 1.481, 1.161, 0.943, 0.763],
+      ratios: [3.133, 2.045, 1.481, 1.161, 0.971, 0.811],
       reverse: 2.8,
       finalDrive: 4.1,
+      primaryReduction: 1.16,
       drivetrain: "RWD",
       efficiency: 0.91,
       clutchCapacityNm: 300,
@@ -348,8 +351,9 @@ export const VEHICLES: Vehicle[] = [
       revHappiness: 1.35,
     },
     verified: ["1997 cc F20C", "237 hp @ 8300 rpm", "207 Nm @ 7500 rpm", "6-speed manual", "9000 rpm redline"],
-    estimated: ["Gear ratio set for AP1", "Flywheel inertia", "Drivetrain loss"],
+    estimated: ["Flywheel inertia", "Drivetrain loss"],
     sources: [
+      { label: "Honda — S2000 transmission", url: "https://hondanews.com/en-US/releases/release-4a111fc377fd37d93a2f73004c34c870-honda-s2000-transmission" },
       { label: "Honda — S2000 heritage", url: "https://global.honda/en/heritage/" },
       { label: "Wikipedia — Honda S2000", url: "https://en.wikipedia.org/wiki/Honda_S2000" },
     ],

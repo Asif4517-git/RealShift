@@ -11,7 +11,7 @@ for (const v of vehicles) {
   const audit=auditVehicle(v); assert.deepEqual(audit.errors,[],`${v.id}: ${audit.errors.join('; ')}`);
   for (const mode of ['manual','assisted','auto'] as ClutchMode[]) for (let gear=1; gear<=v.gearbox.speeds;gear++) {
     const sim=new DynoSimulation(v); sim.setClutchMode(mode); sim.engineOn=true; sim.gear=gear;
-    const rpm=Math.min(3000,v.engine.redline*0.7), ratio=v.gearbox.ratios[gear-1]*v.gearbox.finalDrive;
+    const rpm=Math.min(3000,v.engine.redline*0.7), ratio=v.gearbox.ratios[gear-1]*v.gearbox.finalDrive*(v.gearbox.primaryReduction??1);
     sim.rpm=rpm; sim.wheelOmega=rpm*(2*Math.PI/60)/ratio; sim.throttle=0.35; sim.throttleTarget=0.35; sim.dynoLoad=20;
     for(let i=0;i<60;i++) sim.tick(dt);
     const s=sim.snapshot(); const expected=s.wheelRpm*ratio;
@@ -22,7 +22,7 @@ for (const v of vehicles) {
   }
   // One-step wheel angular acceleration is explained by delivered torque and road/dyno load.
   const sim=new DynoSimulation(v);sim.engineOn=true;sim.gear=2;sim.rpm=2500;
-  const r=tyreRadiusM(v),ratio=v.gearbox.ratios[1]*v.gearbox.finalDrive;
+  const r=tyreRadiusM(v),ratio=v.gearbox.ratios[1]*v.gearbox.finalDrive*(v.gearbox.primaryReduction??1);
   sim.wheelOmega=sim.rpm*2*Math.PI/60/ratio;sim.throttle=0.4;sim.throttleTarget=0.4;sim.dynoLoad=35;
   const old=sim.wheelOmega, inertia=(v.chassis.weightKg+1250)*r*r+9+(v.gearbox.drivetrain==='4WD'?4:0);
   const resistance=roadLoadN(v.chassis.weightKg,v.chassis.widthMm,v.chassis.heightMm,old*r)+35*7.2;
@@ -44,7 +44,7 @@ for (const v of vehicles) {
 // actuator reconnects. This prevents free-revving with an open clutch.
 for (const v of vehicles) for (const mode of ['assisted','auto'] as const) {
   const sim=new DynoSimulation(v);sim.setClutchMode(mode);sim.engineOn=true;sim.gear=1;
-  const ratio=v.gearbox.ratios[0]*v.gearbox.finalDrive;
+  const ratio=v.gearbox.ratios[0]*v.gearbox.finalDrive*(v.gearbox.primaryReduction??1);
   sim.rpm=Math.min(3500,v.engine.redline*0.8);sim.wheelOmega=sim.rpm*2*Math.PI/60/ratio;
   sim.throttle=0.8;sim.throttleTarget=0.8;sim.selectGear(2);
   for(let i=0;i<180;i++) {
