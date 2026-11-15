@@ -410,7 +410,7 @@ export function DynoBay({ onNavigate, onOpenControls, onOpenSettings, onOpenAudi
                   <div>Gear {snap.gearLabel} · Gear ratio {snap.gear === 0 ? "—" : nf(currentRatio, 3)} · Final {nf(vehicle.gearbox.finalDrive, 3)}</div>
                   <div>Engine {nf(snap.rpm)} rpm · Input {snap.gear === 0 ? "not modelled in neutral" : `${nf(snap.gearboxInputRpm)} rpm`}</div>
                   <div>Wheel {nf(snap.wheelRpm)} rpm · Roller {nf(snap.rollerRpm)} rpm · {nf(speedValue(snap.speedKph, units), 1)} {speedUnit(units)} equivalent</div>
-                  <div>Clutch pedal {nf(snap.clutch * 100)}% · Slip {snap.gear === 0 ? "—" : `${nf(snap.clutchSlipRpm)} rpm`} · Torque {nf(snap.clutchTorqueNm)} Nm</div>
+                  <div>Clutch actuator (open) {nf(snap.clutch * 100)}% · Slip {snap.gear === 0 ? "—" : `${nf(snap.clutchSlipRpm)} rpm`} · Torque {nf(snap.clutchTorqueNm)} Nm</div>
                   <div>Engine net {nf(snap.engineTorqueNm)} Nm · Wheel {nf(snap.wheelTorqueNm)} Nm · Wheel power {nf(snap.wheelPowerHp, 1)} hp</div>
                   <div>Dyno load {nf(snap.dynoLoadPct)}% · {nf(snap.resistForceN)} N · Effective throttle {nf(snap.effectiveThrottle * 100)}%</div>
                   {vehicleAudit.errors.map(warning => <div key={warning} className="text-danger">Configuration error: {warning}</div>)}

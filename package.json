@@ -17,7 +17,8 @@
     "test:run-delete": "node tests/run-delete-browser.mjs",
     "test:presets-browser": "node tests/presets-browser.mjs",
     "test:drivetrain": "esbuild tests/drivetrain.test.ts --bundle --platform=node --format=esm --outfile=/tmp/realshift-drivetrain-test.mjs && node /tmp/realshift-drivetrain-test.mjs",
-    "test:diagnostics-browser": "node tests/diagnostics-browser.mjs"
+    "test:diagnostics-browser": "node tests/diagnostics-browser.mjs",
+    "test:reference-browser": "node tests/reference-browser.mjs"
   },
   "dependencies": {
     "clsx": "2.1.1",

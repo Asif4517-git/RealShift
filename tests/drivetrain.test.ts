@@ -61,3 +61,37 @@ console.log('Held-throttle assisted upshift cut and reconnection passed across f
  const s=new DynoSimulation(VEHICLES[0]);s.engineOn=true;s.gear=1;s.selectGear(2);s.setClutchMode('manual');
  assert(!s.shiftInProgress && s.autoClutchTimer===0);
 }
+
+for (const v of vehicles) for (const mode of ['manual','assisted','auto'] as const) {
+  // Closed-throttle clutch transmits engine braking into the rolling wheels.
+  const coast = new DynoSimulation(v); coast.setClutchMode(mode); coast.engineOn = true;
+  coast.gear = 2; coast.rpm = Math.min(3500, v.engine.redline * 0.8);
+  coast.wheelOmega = coast.rpm * 2 * Math.PI / 60 / (v.gearbox.ratios[1] * v.gearbox.finalDrive);
+  coast.dynoLoad=0; coast.tick(dt);
+  assert(coast.clutchTorque < 0 && coast.wheelTorque < 0, `${v.id} ${mode}: engine braking`);
+  // Reverse accelerates in the opposite direction without a fixed speed cap.
+  const reverse = new DynoSimulation(v); reverse.setClutchMode(mode); reverse.engineOn=true;
+  reverse.gear=-1; reverse.rpm=v.engine.idleRpm;
+  if (mode === 'manual') { reverse.clutchActual=1; reverse.clutchPedal=1; }
+  reverse.setInputs({throttle:0.7});
+  for(let i=0;i<120;i++) reverse.tick(dt);
+  reverse.setInputs({clutch:0});
+  for(let i=0;i<600;i++) reverse.tick(dt);
+  assert(reverse.wheelOmega < 0, `${v.id} ${mode}: reverse launch`);
+  assert(reverse.snapshot().wheelPowerHp>=0, `${v.id} ${mode}: reverse power`);
+  // A direction-changing engagement at speed is rejected in either direction.
+  reverse.clutchActual=1;
+  reverse.selectGear(1);
+  assert.equal(reverse.gear,-1,`${v.id} ${mode}: forward selected while reversing`);
+  const forward=new DynoSimulation(v);forward.setClutchMode(mode);forward.gear=1;
+  forward.wheelOmega=10;forward.clutchActual=1;forward.selectGear(-1);
+  assert.equal(forward.gear,1,`${v.id} ${mode}: reverse selected while moving forward`);
+}
+console.log('Engine braking, reverse launch and direction-change safety passed across fleet.');
+
+// A fuel limiter cannot clamp a mechanically driven crank below its actual RPM.
+{
+ const v=VEHICLES[0], s=new DynoSimulation(v); s.setClutchMode('manual');s.engineOn=true;
+ s.gear=1;s.rpm=v.engine.limiter+500;s.wheelOmega=s.rpm*2*Math.PI/60/(v.gearbox.ratios[0]*v.gearbox.finalDrive);
+ s.tick(dt);assert(s.rpm>v.engine.limiter+220,'mechanical over-rev must not be hidden');
+}

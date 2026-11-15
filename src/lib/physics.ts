@@ -321,7 +321,9 @@ export class DynoSimulation {
     const ratio = target === -1 ? -this.vehicle.gearbox.reverse * this.vehicle.gearbox.finalDrive
       : target === 0 ? 0 : this.vehicle.gearbox.ratios[target - 1] * this.vehicle.gearbox.finalDrive;
     const inputRpm = this.wheelOmega * ratio * 60 / (2 * Math.PI);
-    if (inputRpm > this.vehicle.engine.limiter * 1.05) {
+    // A driven shaft turning backwards cannot be synchronised to a running
+    // engine, regardless of how small its signed RPM appears.
+    if (inputRpm < -100 || inputRpm > this.vehicle.engine.limiter * 1.05) {
       this.emit("overrev-reject");
       return;
     }
@@ -530,7 +532,8 @@ export class DynoSimulation {
     }
     this.clutchTorque = clutchTorque;
     engineOmega = Math.max(0, engineOmega + (engineNet - clutchTorque) / eng.flywheelInertia * dt);
-    this.rpm = clamp(engineOmega * 60 / (2 * Math.PI), 0, eng.limiter + 220);
+    // Fuel cut limits powered revs, but cannot prevent a mechanical over-rev.
+    this.rpm = engineOmega * 60 / (2 * Math.PI);
     const drivenTorque = clutchTorque * ratio * gearbox.efficiency;
     this.wheelOmega += (drivenTorque - resistTorque) / wheelInertia * dt;
     // Static resistance cannot reverse a stopped roller on its own.
